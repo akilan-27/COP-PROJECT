@@ -1,0 +1,2436 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisPdM — Deep Learning &amp; Cloud-Stream Predictive Maintenance Software Platform</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              950: '#060913',
+              925: '#0b1021',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      background-color: #060913;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1021;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.14);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+    }
+    .glass-card-hover {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 34px -8px rgba(14, 165, 233, 0.18);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.22);
+    }
+    .glow-rose {
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.28);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.22);
+    }
+    .grid-bg {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    }
+    @keyframes pulseSlow {
+      0%, 100% { opacity: 0.45; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.04); }
+    }
+    .animate-pulse-slow {
+      animation: pulseSlow 4s ease-in-out infinite;
+    }
+    @keyframes flowDash {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .flow-line {
+      stroke-dasharray: 6 6;
+      animation: flowDash 0.8s linear infinite;
+    }
+    .tab-active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(99, 102, 241, 0.18));
+      border-color: rgba(56, 189, 248, 0.6);
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200 grid-bg">
+
+  <!-- TOP TELEMETRY TICKER & SOFTWARE-ONLY BADGE -->
+  <div class="bg-slate-950/90 border-b border-slate-800/80 px-4 py-1.5 text-xs font-mono flex flex-wrap items-center justify-between gap-2 z-40">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        SOFTWARE ENGINE ONLINE
+      </span>
+      <span class="text-slate-400 hidden sm:inline">Model: <strong class="text-sky-400">v1.2.0-lstm</strong> (TensorFlow 2.10 / TFS gRPC)</span>
+      <span class="text-slate-600 hidden md:inline">|</span>
+      <span class="text-slate-400 hidden md:inline">Kafka Topic: <code class="text-indigo-300">machine_telemetry</code> (50-tick Window)</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-slate-400">RMSE: <strong class="text-emerald-400">14.2 cycles</strong> <span class="text-slate-500">(vs 22.5 RF)</span></span>
+      <span class="text-slate-400 hidden sm:inline">PHM08 Safety Score: <strong class="text-sky-400">432.15</strong> <span class="text-slate-500">(&lt;500)</span></span>
+      <span id="liveClockDisplay" class="text-slate-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">2026-10-27T11:40:12Z</span>
+    </div>
+  </div>
+
+  <!-- STICKY NAVIGATION HEADER -->
+  <header class="sticky top-0 z-30 bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 via-indigo-500 to-emerald-500 p-[1px] glow-cyan">
+          <div class="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
+            <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-lg tracking-tight text-white">Aegis<span class="text-sky-400">PdM</span></span>
+            <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">100% Software Architecture</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Deep LSTM Sequence-to-Value RUL Engine &amp; Cloud-Native Streaming Platform</p>
+        </div>
+      </div>
+
+      <!-- Primary Workspace Switcher -->
+      <nav class="flex items-center gap-1.5 overflow-x-auto max-w-full py-1" aria-label="Workspace Views">
+        <button type="button" data-nav="dashboard" class="nav-tab tab-active px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>1. Live UI Command Center</span>
+        </button>
+        <button type="button" data-nav="pipeline" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>2. Data Stream &amp; Prep Lab</span>
+        </button>
+        <button type="button" data-nav="lstm" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>3. Deep LSTM &amp; Safety Math</span>
+        </button>
+        <button type="button" data-nav="code" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          <span>4. Codebase, FastAPI &amp; CI/CD</span>
+        </button>
+        <button type="button" data-nav="impact" class="nav-tab px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>5. Software ROI &amp; Research</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- INTERACTIVE HERO BANNER WITH ANIMATED NEURAL STREAM CANVAS -->
+  <section class="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-900/70 to-slate-950">
+    <canvas id="heroNeuralCanvas" class="absolute inset-0 w-full h-full pointer-events-none opacity-45"></canvas>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div class="lg:col-span-7 space-y-4">
+          <div class="inline-flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30">
+              Pure Software Stack • Zero Hardware Lock-In
+            </span>
+            <span class="px-2.5 py-1 rounded-full text-xs font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+              Sequence-to-Value Regression (t ➔ t + n)
+            </span>
+          </div>
+          <h1 class="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            Predictive Maintenance <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-emerald-400">Deep Learning &amp; Streaming Software</span>
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+            Eliminating data silos, non-linear wear blindspots, and threshold alarm fatigue through an end-to-end software pipeline: <strong class="text-white">mTLS MQTT Ingestion ➔ Partitioned Apache Kafka Streams ➔ Redis 50-Tick Sliding Window &amp; Z-Score Filtering ➔ Dual-Layer LSTM Neural Network (TensorFlow Serving gRPC) ➔ Polyglot InfluxDB/PostgreSQL &amp; FastAPI</strong>.
+          </p>
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button type="button" id="heroSimulateBtn" class="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-sm transition flex items-center gap-2 shadow-lg shadow-sky-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Trigger Live Critical RUL Inference</span>
+            </button>
+            <button type="button" id="heroJumpArchBtn" class="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 transition flex items-center gap-2">
+              <span>Inspect Streaming &amp; LSTM Architecture</span>
+              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+            <button type="button" id="heroJumpCodeBtn" class="px-3.5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-amber-300 font-mono text-xs border border-amber-500/30 transition">
+              { } View Python / FastAPI / Docker Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Core Software Problem Solver Matrix -->
+        <div class="lg:col-span-5 grid grid-cols-2 gap-3">
+          <div class="glass-card glass-card-hover rounded-xl p-4 border-l-4 border-l-sky-400">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>UNPLANNED DOWNTIME</span>
+              <span class="text-sky-400">Sec 1 &amp; 3</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1">-35%</div>
+            <p class="text-xs text-slate-400 mt-1">Cuts $50k/hr reactive stops to $5k/hr scheduled ($45k saved/incident)</p>
+          </div>
+
+          <div class="glass-card glass-card-hover rounded-xl p-4 border-l-4 border-l-emerald-400">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>LSTM TEST ACCURACY</span>
+              <span class="text-emerald-400">Sec 23 &amp; 24</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1">14.2 <span class="text-sm font-normal text-slate-400">RMSE</span></div>
+            <p class="text-xs text-slate-400 mt-1">R² = 0.81 • Beats Random Forest baseline (22.5 cycles RMSE) by 36.9%</p>
+          </div>
+
+          <div class="glass-card glass-card-hover rounded-xl p-4 border-l-4 border-l-indigo-400">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>STREAM INGESTION</span>
+              <span class="text-indigo-400">Sec 10 &amp; 19</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1">(50, 14)</div>
+            <p class="text-xs text-slate-400 mt-1">3D Sliding Window Tensor • 120MB/min raw ➔ 99.9% Edge TFLite reduction</p>
+          </div>
+
+          <div class="glass-card glass-card-hover rounded-xl p-4 border-l-4 border-l-amber-400">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>CLOUD &amp; SW STACK</span>
+              <span class="text-amber-400">Sec 35</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1">$23,500</div>
+            <p class="text-xs text-slate-400 mt-1">$18.5k AWS EKS/MSK/p3 GPU + $5k InfluxDB &amp; BI Software (&lt;6 mo ROI)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WORKSPACE CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: LIVE FACTORY FLOOR SOFTWARE COMMAND CENTER (Sec 30, 25, 10, 14)   -->
+    <!-- ========================================================================= -->
+    <section id="view-dashboard" class="workspace-view space-y-6">
+      <!-- Top Control & Status Bar (Section 30 Mockup Realized in Full Interactive Software) -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono uppercase px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">Section 30 &amp; 25</span>
+              <h2 class="text-lg sm:text-xl font-bold text-white">Supervisor RUL Operational Intelligence Dashboard</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Abstracts neural network tensor complexities into Traffic-Light RUL status, live RMS vs. RUL degradation curves, and 1-click ERP/PagerDuty work orders.</p>
+          </div>
+
+          <!-- Stream Simulation Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="toggleStreamBtn" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-medium flex items-center gap-1.5 transition">
+              <span id="streamStatusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span id="streamStatusLabel">STREAM: LIVE (50-Tick Window)</span>
+            </button>
+            <button type="button" id="injectSpikeBtn" class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-mono transition" title="Section 31: Test Z-score anomaly filter against corrupted sensor spike">
+              ⚡ Inject Sensor Spike (Z-Score Filter)
+            </button>
+            <button type="button" id="simulateGapBtn" class="px-3 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-mono transition" title="Section 12: Test Forward-Fill (<3s) vs Sequence Break (>3s)">
+              📡 Simulate Network Drop
+            </button>
+          </div>
+        </div>
+
+        <!-- Fleet KPI Filter Pills (Total: 42 | Normal: 39 | Critical: 1 | Offline: 2) -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4">
+          <button type="button" data-filter="ALL" class="fleet-filter-btn text-left p-3 rounded-xl bg-slate-900/90 border border-sky-500/50 transition">
+            <div class="text-xs font-mono text-slate-400">TOTAL MONITORED</div>
+            <div class="text-2xl font-bold text-white mt-0.5" id="kpiTotalCount">42</div>
+            <div class="text-[11px] text-sky-400 mt-0.5">Click to view all</div>
+          </button>
+          <button type="button" data-filter="NORMAL" class="fleet-filter-btn text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-emerald-400">
+              <span>NORMAL (&gt;72h)</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            </div>
+            <div class="text-2xl font-bold text-emerald-400 mt-0.5" id="kpiNormalCount">39</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Piecewise capped / healthy</div>
+          </button>
+          <button type="button" data-filter="WARNING" class="fleet-filter-btn text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-amber-400">
+              <span>WARNING (24–72h)</span>
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            </div>
+            <div class="text-2xl font-bold text-amber-400 mt-0.5" id="kpiWarningCount">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Alerts sent &lt;48h</div>
+          </button>
+          <button type="button" data-filter="CRITICAL" class="fleet-filter-btn text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-rose-400">
+              <span>CRITICAL (&lt;24h)</span>
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            </div>
+            <div class="text-2xl font-bold text-rose-400 mt-0.5" id="kpiCriticalCount">1</div>
+            <div class="text-[11px] text-rose-300 mt-0.5">CNC_Mill_04 (11.5h RUL)</div>
+          </button>
+          <button type="button" data-filter="OFFLINE" class="fleet-filter-btn text-left p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition col-span-2 sm:col-span-1">
+            <div class="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>OFFLINE</span>
+              <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+            </div>
+            <div class="text-2xl font-bold text-slate-300 mt-0.5" id="kpiOfflineCount">2</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">Stream sequence paused</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid: Left Machine Fleet List + Right Deep Telemetry & Degradation Inspector -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left Column: Interactive Machine Fleet Telemetry List -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 font-mono">Active Telemetry Streams</h3>
+              <div class="relative flex-1 max-w-[190px]">
+                <input id="machineSearchInput" type="text" placeholder="Filter ID or component..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-sky-400 font-mono" />
+              </div>
+            </div>
+
+            <!-- Interactive Machine Rows -->
+            <div id="machineListContainer" class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+
+          <!-- Compact 42-Node Factory Floor Matrix Map -->
+          <div class="mt-4 pt-3 border-t border-slate-800/80">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-2 font-mono">
+              <span>42-MACHINE KAFKA PARTITION MATRIX</span>
+              <span id="selectedPartitionLabel" class="text-sky-400">Partition #04</span>
+            </div>
+            <div id="miniFleetGrid" class="grid grid-cols-7 gap-1.5">
+              <!-- 42 interactive mini-cells populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Selected Machine Real-Time Waveform, Degradation Curve & Work Order Dispatch -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- Selected Machine Header Card -->
+          <div class="glass-card rounded-2xl p-4 sm:p-5">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2.5">
+                  <h3 id="detailMachineId" class="text-xl sm:text-2xl font-extrabold font-mono text-white">CNC_Milling_04</h3>
+                  <span id="detailStatusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                    CRITICAL • RUL &lt; 24H
+                  </span>
+                </div>
+                <p id="detailComponentSub" class="text-xs sm:text-sm text-slate-400 mt-1">
+                  Component: <strong class="text-slate-200">Spindle Bearing</strong> • Operating Regime: <strong class="text-sky-300">Cluster #2 (12,000 RPM / 85.5% Load - Titanium)</strong>
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" id="dispatchWorkOrderBtn" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-lg shadow-rose-500/20 flex items-center gap-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                  <span>Dispatch SAP PM / PagerDuty Ticket</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Rolling-Window Feature Indicators (Section 14: RMS, Kurtosis, Crest Factor, RUL) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                <div class="text-[11px] font-mono text-slate-400">PREDICTED RUL</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-rose-400 mt-0.5" id="detailRulHours">11.5 hrs <span class="text-xs text-slate-400">(84 cyc)</span></div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5">Confidence: <span id="detailConfidence">94.8%</span></div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                <div class="text-[11px] font-mono text-slate-400">VIBRATION RMS (w=50)</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-sky-400 mt-0.5" id="detailRmsVal">0.048 g</div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5">Overall energy indicator</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                <div class="text-[11px] font-mono text-slate-400">KURTOSIS (Spikes)</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-amber-400 mt-0.5" id="detailKurtosisVal">5.82</div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5">Micro-crack tail sensitivity</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                <div class="text-[11px] font-mono text-slate-400">CREST FACTOR &amp; TEMP</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-indigo-300 mt-0.5" id="detailCrestTemp">4.1x • 65.2°C</div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5">Peak-to-RMS ratio</div>
+              </div>
+            </div>
+
+            <!-- Live Streaming 50-Step Sliding Window Waveform Canvas -->
+            <div class="mt-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <span class="text-xs font-mono text-slate-300 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                  LIVE 50-TICK SLIDING WINDOW STREAM (Min-Max Normalized [0, 1] + EMA Smoothing)
+                </span>
+                <div class="flex items-center gap-3 text-[11px] font-mono">
+                  <span class="text-sky-400">― vib_x</span>
+                  <span class="text-indigo-400">― vib_y</span>
+                  <span class="text-rose-400">― vib_z</span>
+                  <span class="text-amber-300">- - EMA Trend</span>
+                </div>
+              </div>
+              <div class="relative h-40 w-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+                <canvas id="liveTelemetryCanvas" class="w-full h-full block"></canvas>
+                <div id="streamEventBanner" class="hidden absolute top-2 right-2 px-2.5 py-1 rounded bg-amber-500/90 text-slate-950 font-mono text-xs font-bold shadow">
+                  Z-Score Spike Dropped!
+                </div>
+              </div>
+            </div>
+
+            <!-- Degradation Curve View (Section 30: Vibration RMS vs Model's Predicted RUL Decline) -->
+            <div class="mt-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div>
+                  <h4 class="text-xs font-mono uppercase text-slate-300 font-semibold">Degradation Curve View: Historical Vibration RMS vs. Predicted RUL Decline</h4>
+                  <p class="text-[11px] text-slate-400">Visual proof for floor supervisors comparing Exponential Moving Average (EMA) vibration growth against Piecewise Linear RUL decay.</p>
+                </div>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800">Piecewise Cap = 125 Cycles</span>
+              </div>
+              <div class="relative h-60 w-full bg-slate-950/90 rounded-xl border border-slate-800 p-2">
+                <canvas id="degradationChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live MQTT / Kafka JSON Telemetry & TFS Inference Console (Sections 10 & 25) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card rounded-xl p-3.5">
+              <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                <span>MQTT / KAFKA INPUT PAYLOAD (Sec 10)</span>
+                <span class="text-emerald-400">mTLS Anonymized</span>
+              </div>
+              <pre id="liveJsonInputPre" class="text-[11px] font-mono text-sky-300 bg-slate-950 p-3 rounded-lg border border-slate-800/90 overflow-x-auto leading-relaxed"></pre>
+            </div>
+            <div class="glass-card rounded-xl p-3.5">
+              <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+                <span>TFS gRPC INFERENCE OUTPUT (Sec 25)</span>
+                <span class="text-amber-400">Latency: 4.2ms</span>
+              </div>
+              <pre id="liveJsonOutputPre" class="text-[11px] font-mono text-emerald-300 bg-slate-950 p-3 rounded-lg border border-slate-800/90 overflow-x-auto leading-relaxed"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: STREAMING PIPELINE, PREPROCESSING & DATABASE LAB (Sec 4,9,11,12,26)-->
+    <!-- ========================================================================= -->
+    <section id="view-pipeline" class="workspace-view hidden space-y-6">
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <span class="text-xs font-mono uppercase px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Sections 4, 9, 11, 12, 26, 31, 32, 33</span>
+            <h2 class="text-xl font-bold text-white mt-1">Cloud-Edge Software Streaming Architecture &amp; Preprocessing Lab</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Click any software stage below to inspect its microservice implementation, scaling rules, and security posture.</p>
+          </div>
+
+          <!-- Cloud Kubernetes vs Phase II Edge AI Mode Toggle (Section 33) -->
+          <div class="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button type="button" id="archModeCloudBtn" class="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-sky-500 text-slate-950 transition">
+              Phase I: Cloud K8s (TFS gRPC)
+            </button>
+            <button type="button" id="archModeEdgeBtn" class="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold text-slate-300 hover:text-white transition">
+              Phase II: Edge TFLite (99.9% BW Saved)
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive SVG + Node Pipeline Visualizer -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3 relative pt-2">
+          <button type="button" data-stage="mqtt" class="arch-stage-btn text-left p-3.5 rounded-xl bg-slate-900/90 border-2 border-sky-500 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-sky-400">
+              <span>01. MQTT + mTLS</span>
+              <span>Sec 10 &amp; 31</span>
+            </div>
+            <div class="font-bold text-white text-sm mt-1">Zero-Trust Anonymizer</div>
+            <p class="text-[11px] text-slate-400 mt-1">Strips CAD/Order metadata ➔ publishes 1s JSON bursts over mTLS.</p>
+          </button>
+
+          <button type="button" data-stage="kafka" class="arch-stage-btn text-left p-3.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-indigo-400">
+              <span>02. GO + KAFKA</span>
+              <span>Sec 26 &amp; 32</span>
+            </div>
+            <div class="font-bold text-white text-sm mt-1">Hash-Partitioned Stream</div>
+            <p class="text-[11px] text-slate-400 mt-1">Go pod ingests MQTT; Kafka partitions by <code class="text-indigo-300">hash(machine_id)</code>.</p>
+          </button>
+
+          <button type="button" data-stage="prep" class="arch-stage-btn text-left p-3.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-emerald-400">
+              <span>03. PYTHON + REDIS</span>
+              <span>Sec 12 &amp; 26</span>
+            </div>
+            <div class="font-bold text-white text-sm mt-1">Data Prep &amp; 50-Tick Buffer</div>
+            <p class="text-[11px] text-slate-400 mt-1">Z-score spike drop, Forward-Fill (&lt;3s), Min-Max [0,1], Redis window.</p>
+          </button>
+
+          <button type="button" data-stage="tfs" class="arch-stage-btn text-left p-3.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-amber-400">
+              <span>04. TF SERVING (C++)</span>
+              <span>Sec 26 &amp; 32</span>
+            </div>
+            <div class="font-bold text-white text-sm mt-1">gRPC Inference &amp; HPA</div>
+            <p class="text-[11px] text-slate-400 mt-1">Zero-downtime <code class="text-amber-300">SavedModel</code> hot-swap; K8s HPA at &gt;70% CPU.</p>
+          </button>
+
+          <button type="button" data-stage="db" class="arch-stage-btn text-left p-3.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="flex items-center justify-between text-xs font-mono text-rose-400">
+              <span>05. POLYGLOT DB + API</span>
+              <span>Sec 11 &amp; 28</span>
+            </div>
+            <div class="font-bold text-white text-sm mt-1">InfluxDB + PostgreSQL</div>
+            <p class="text-[11px] text-slate-400 mt-1">7-day raw 10kHz ➔ 1m downsample + FastAPI &amp; Node.js Alerts.</p>
+          </button>
+        </div>
+
+        <!-- Stage Deep-Dive Inspector Card -->
+        <div id="archStageDetailBox" class="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          <!-- Dynamically updated by JS when clicking stage cards or Cloud/Edge mode -->
+        </div>
+      </div>
+
+      <!-- Interactive Preprocessing & EDA Simulation Lab (Sections 12, 13, 14, 31) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Missing Value Imputation & Adversarial Z-Score Simulator -->
+        <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-mono text-sky-400">SECTION 12 &amp; 31 INTERACTIVE SIMULATOR</span>
+              <h3 class="text-base font-bold text-white">Missing Value Imputation &amp; Adversarial Robustness</h3>
+            </div>
+            <span id="imputationRuleBadge" class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              Forward-Fill Active (&le; 3.0s)
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Adjust the simulated network drop duration below. Gaps under <strong class="text-white">3.0 seconds</strong> propagate the last valid observation (<code class="text-sky-300">ffill</code>). Gaps exceeding <strong class="text-rose-300">3.0 seconds</strong> trigger a mandatory sequence break and reset the LSTM internal cell state to prevent learning fabricated interpolated patterns.
+          </p>
+
+          <div class="space-y-2 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300">Simulated Telemetry Gap Duration:</span>
+              <span id="gapDurationVal" class="text-sky-400 font-bold text-sm">1.8 seconds</span>
+            </div>
+            <input id="gapDurationSlider" type="range" min="0.2" max="6.0" step="0.2" value="1.8" class="w-full accent-sky-400 cursor-pointer" />
+            <div class="flex justify-between text-[10px] font-mono text-slate-500">
+              <span>0.2s (Micro jitter)</span>
+              <span class="text-amber-400">3.0s Threshold</span>
+              <span>6.0s (Packet loss)</span>
+            </div>
+          </div>
+
+          <!-- Min-Max Normalizer Live Calculator -->
+          <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300 font-semibold">Min-Max Feature Normalizer: X_scaled = (X - X_min) / (X_max - X_min)</span>
+              <span class="text-indigo-400">[0, 1] Scale</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-1" for="normRawInput">Raw Sensor X</label>
+                <input id="normRawInput" type="number" step="0.1" value="65.2" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-white" />
+              </div>
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-1" for="normMinInput">Historical X_min</label>
+                <input id="normMinInput" type="number" step="0.1" value="22.0" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-slate-300" />
+              </div>
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-1" for="normMaxInput">Historical X_max</label>
+                <input id="normMaxInput" type="number" step="0.1" value="88.0" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-slate-300" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-slate-800 text-xs font-mono">
+              <span class="text-slate-400">Normalized Tensor Input Value:</span>
+              <span id="normResultOutput" class="text-sm font-bold text-emerald-400">0.6545 (Valid LSTM Input)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Polyglot Persistence Database Explorer (PostgreSQL + InfluxDB - Section 11) -->
+        <div class="lg:col-span-6 glass-card rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono text-rose-400">SECTION 11 &amp; 13 POLYGLOT PERSISTENCE</span>
+                <h3 class="text-base font-bold text-white">Interactive Database Schema &amp; EDA Query Runner</h3>
+              </div>
+              <div class="flex gap-1">
+                <button type="button" data-db="pg_rul" class="db-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40">PostgreSQL: rul_predictions</button>
+                <button type="button" data-db="pg_logs" class="db-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800">maintenance_logs</button>
+                <button type="button" data-db="influx" class="db-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800">InfluxDB Flux</button>
+              </div>
+            </div>
+
+            <div id="dbQueryDisplay" class="mt-3 bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-indigo-300 overflow-x-auto">
+              SELECT pred_id, machine_id, timestamp, predicted_rul, confidence FROM rul_predictions ORDER BY timestamp DESC LIMIT 5;
+            </div>
+
+            <div id="dbTableContainer" class="mt-3 overflow-x-auto">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- EDA Correlation & K-Means Operating Condition Note (Section 13) -->
+          <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+            <div class="text-xs text-slate-300">
+              <strong class="text-sky-400 font-mono">EDA Dimensionality &amp; K-Means Filter (Sec 13):</strong> Drops redundant sensor channels with Pearson correlation <code class="text-emerald-300">r &gt; 0.95</code> and clusters Titanium vs. Aluminum cutting loads so heavy load isn't misclassified as bearing failure.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 3: DEEP LSTM ARCHITECTURE & ASYMMETRIC SAFETY MATH LAB (Sec 15-24)   -->
+    <!-- ========================================================================= -->
+    <section id="view-lstm" class="workspace-view hidden space-y-6">
+      <!-- Top 6-Layer LSTM Architecture & Cell Gate Simulator -->
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <span class="text-xs font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Sections 15, 16, 20, 23, 24</span>
+            <h2 class="text-xl font-bold text-white mt-1">Dual-Layer LSTM Architecture &amp; Vanishing Gradient Solver</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Click any layer in the sequential topology below to inspect its tensor shape, activation math, and regularization role.</p>
+          </div>
+          <div class="text-xs font-mono bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
+            Optimizer: <strong class="text-sky-400">Adam (lr=0.001)</strong> • Loss: <strong class="text-emerald-400">MSE</strong>
+          </div>
+        </div>
+
+        <!-- 6-Layer Interactive Network Topology -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <button type="button" data-layer="0" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900 border-2 border-sky-400 transition">
+            <div class="text-[10px] font-mono text-sky-400">LAYER 01</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">Input Tensor</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 50, 14)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">50 steps × 14 features</div>
+          </button>
+
+          <button type="button" data-layer="1" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="text-[10px] font-mono text-indigo-400">LAYER 02</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">LSTM_1 (100u)</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 50, 100)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">return_sequences=True</div>
+          </button>
+
+          <button type="button" data-layer="2" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="text-[10px] font-mono text-amber-400">LAYER 03</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">Dropout_1 (20%)</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 50, 100)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Spatial regularization</div>
+          </button>
+
+          <button type="button" data-layer="3" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="text-[10px] font-mono text-indigo-400">LAYER 04</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">LSTM_2 (50u)</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 50)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">return_sequences=False</div>
+          </button>
+
+          <button type="button" data-layer="4" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="text-[10px] font-mono text-amber-400">LAYER 05</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">Dropout_2 (20%)</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 50)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Prevents sensor overfit</div>
+          </button>
+
+          <button type="button" data-layer="5" class="lstm-layer-btn text-left p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 transition">
+            <div class="text-[10px] font-mono text-emerald-400">LAYER 06</div>
+            <div class="font-bold text-white text-xs sm:text-sm mt-0.5">RUL_Output (1u)</div>
+            <div class="text-xs font-mono text-slate-300 mt-1">(None, 1)</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Linear activation RUL</div>
+          </button>
+        </div>
+
+        <!-- Selected Layer Inspector -->
+        <div id="lstmLayerDetailBox" class="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Interactive Asymmetric PHM08 Safety Score Calculator & Epoch Convergence Simulator -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Asymmetric Safety Score Playground (Sections 22 & 23) -->
+        <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-mono text-rose-400">SECTIONS 22 &amp; 23 • PHM08 CHALLENGE METRIC</span>
+              <h3 class="text-base font-bold text-white">Asymmetric Safety Score vs. Symmetric RMSE Calculator</h3>
+            </div>
+            <span id="safetyVerdictBadge" class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+              LATE PREDICTION (DANGEROUS)
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-400">
+            In standard regression, being off by <code class="text-rose-300">+10 days</code> (Late) or <code class="text-emerald-300">-10 days</code> (Early) yields the exact same RMSE. In industrial spindles, a Late Prediction causes catastrophic crash ($45k+ loss). Test the exponential PHM08 safety function below:
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-300">True Machine RUL:</span>
+                <span id="trueRulLabel" class="text-emerald-400 font-bold">10 cycles</span>
+              </div>
+              <input id="trueRulSlider" type="range" min="1" max="60" value="10" class="w-full accent-emerald-400 cursor-pointer" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-300">Model Predicted RUL:</span>
+                <span id="predRulLabel" class="text-sky-400 font-bold">20 cycles</span>
+              </div>
+              <input id="predRulSlider" type="range" min="1" max="60" value="20" class="w-full accent-sky-400 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2.5 text-center font-mono">
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-400">ERROR d = Pred - True</div>
+              <div id="calcDiffVal" class="text-base font-bold text-white mt-0.5">+10 cycles</div>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-400">SYMMETRIC |d| (RMSE)</div>
+              <div id="calcRmseVal" class="text-base font-bold text-slate-300 mt-0.5">10.00</div>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-rose-500/40">
+              <div class="text-[10px] text-rose-300">PHM08 SAFETY PENALTY</div>
+              <div id="calcSafetyVal" class="text-base font-bold text-rose-400 mt-0.5">1.718</div>
+            </div>
+          </div>
+
+          <div class="relative h-52 w-full bg-slate-950 rounded-xl border border-slate-800 p-2">
+            <canvas id="asymmetricChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: Cloud GPU Training Convergence & EarlyStopping Simulator (Sections 21 & 24) -->
+        <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-mono text-sky-400">SECTIONS 21 &amp; 24 • AWS EC2 p3.2xlarge (NVIDIA V100)</span>
+                <h3 class="text-base font-bold text-white">Training Loop &amp; EarlyStopping Convergence Simulator</h3>
+              </div>
+              <button type="button" id="replayTrainingBtn" class="px-3 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-mono font-semibold transition">
+                ▶ Replay 42-Epoch Training
+              </button>
+            </div>
+
+            <p class="text-xs text-slate-400 mt-1">
+              Monitors <code class="text-sky-300">val_loss</code> with <code class="text-amber-300">EarlyStopping(patience=10, restore_best_weights=True)</code> and saves <code class="text-emerald-300">best_pdm_model.h5</code> at Epoch 32 (<code class="text-emerald-300">val_loss: 230.15</code>, <code class="text-emerald-300">val_mae: 10.95</code>).
+            </p>
+
+            <div class="relative h-56 w-full bg-slate-950 rounded-xl border border-slate-800 p-2 mt-3">
+              <canvas id="trainingHistoryChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Live Training Log Console (Section 24 verbatim ground truth) -->
+          <div class="bg-slate-950 rounded-xl border border-slate-800 p-3 font-mono text-[11px] text-slate-300 max-h-40 overflow-y-auto" id="trainingConsoleBox">
+            <div class="text-slate-500"># AWS EC2 p3.2xlarge (NVIDIA V100) — Batch Size: 64 | Max Epochs: 100</div>
+            <div>Epoch 1/100 - 14s 21ms/step - loss: 3540.12 - mae: 42.15 - val_loss: 1850.33 - val_mae: 30.12</div>
+            <div>Epoch 2/100 - 10s 19ms/step - loss: 1210.45 - mae: 23.40 - val_loss: 910.11 - val_mae: 19.80</div>
+            <div class="text-emerald-400 font-semibold">Epoch 32/100 - 10s 19ms/step - loss: 245.30 - mae: 11.20 - val_loss: 230.15 - val_mae: 10.95 [BEST CHECKPOINT SAVED]</div>
+            <div>Epoch 33/100 - 10s 19ms/step - loss: 242.10 - mae: 11.15 - val_loss: 232.00 - val_mae: 11.00</div>
+            <div class="text-amber-400">Epoch 42/100 - Restoring model weights from the end of the best epoch: 32. Early stopping.</div>
+            <div class="text-sky-400 pt-1">Final Evaluation ➔ RMSE: 15.17 | R2 Score: 0.81 | Custom Safety Score: 432.15 (&lt; 500)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 4: PYTHON CODEBASE, FASTAPI SANDBOX & CI/CD/CT DEVOPS (Sec 17-22,27-29)-->
+    <!-- ========================================================================= -->
+    <section id="view-code" class="workspace-view hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left 7 Columns: Executable Python Codebase & Dockerfile Explorer (Sections 17-22 & 27) -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <span class="text-xs font-mono text-amber-400">SECTIONS 17–22 &amp; 27 • COMPLETE SOFTWARE CODEBASE</span>
+                <h2 class="text-lg font-bold text-white">Production Python &amp; Docker Implementation</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" id="runCodeSnippetBtn" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-bold text-xs transition flex items-center gap-1">
+                  <span>▶ Run in Sandbox</span>
+                </button>
+                <button type="button" id="copyCodeBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition">
+                  Copy Code
+                </button>
+              </div>
+            </div>
+
+            <!-- 7 Code File Tabs -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-800">
+              <button type="button" data-code="env" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40 whitespace-nowrap">17_env_setup.py</button>
+              <button type="button" data-code="prep" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">18_preprocess.py</button>
+              <button type="button" data-code="seq" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">19_sequences.py</button>
+              <button type="button" data-code="model" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">20_lstm_model.py</button>
+              <button type="button" data-code="train" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">21_train_loop.py</button>
+              <button type="button" data-code="eval" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">22_eval_metrics.py</button>
+              <button type="button" data-code="docker" class="code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap">27_Dockerfile</button>
+            </div>
+
+            <pre id="codeEditorPre" class="mt-3 bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-sky-200 overflow-x-auto max-h-[360px] leading-relaxed"></pre>
+          </div>
+
+          <!-- Simulated Terminal Output -->
+          <div class="mt-3 bg-slate-950 rounded-xl border border-slate-800 p-3 font-mono text-xs">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+              <span>SANDBOX EXECUTION CONSOLE (python:3.9-slim-buster)</span>
+              <span id="codeExecStatus" class="text-emerald-400">Ready</span>
+            </div>
+            <div id="codeExecOutput" class="text-emerald-300 whitespace-pre-wrap leading-relaxed">TensorFlow Version: 2.10.0 | Seeds locked (np=42, tf=42)</div>
+          </div>
+        </div>
+
+        <!-- Right 5 Columns: FastAPI Swagger Live Tester (Sec 28) & CI/CD/CT Simulator (Sec 29) -->
+        <div class="lg:col-span-5 space-y-6">
+          <!-- FastAPI Interactive OpenAPI Tester -->
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono text-emerald-400">SECTION 28 • FASTAPI SWAGGER SANDBOX</span>
+                <h3 class="text-base font-bold text-white">Interactive RESTful API Gateway (:8000)</h3>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">OpenAPI 3.0</span>
+            </div>
+
+            <div class="space-y-2">
+              <button type="button" data-api="health" class="api-test-btn w-full text-left p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-between transition">
+                <div class="flex items-center gap-2 font-mono text-xs">
+                  <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">GET</span>
+                  <span class="text-white">/api/v1/health</span>
+                </div>
+                <span class="text-[11px] text-slate-400">Check ML Serving Pod ➔</span>
+              </button>
+
+              <button type="button" data-api="rul" class="api-test-btn w-full text-left p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-between transition">
+                <div class="flex items-center gap-2 font-mono text-xs">
+                  <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">GET</span>
+                  <span class="text-white">/api/v1/machine/CNC_Milling_04/rul</span>
+                </div>
+                <span class="text-[11px] text-slate-400">Query PostgreSQL RUL ➔</span>
+              </button>
+
+              <button type="button" data-api="batch" class="api-test-btn w-full text-left p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-between transition">
+                <div class="flex items-center gap-2 font-mono text-xs">
+                  <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">POST</span>
+                  <span class="text-white">/api/v1/predict/batch</span>
+                </div>
+                <span class="text-[11px] text-slate-400">Upload Offline CSV Batch ➔</span>
+              </button>
+            </div>
+
+            <pre id="apiResponsePre" class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-[11px] text-sky-300 overflow-x-auto max-h-44 leading-relaxed"></pre>
+          </div>
+
+          <!-- CI/CD & Continuous Training (CT) Pipeline Simulator (Section 29 & 36) -->
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono text-indigo-400">SECTIONS 29 &amp; 36 • GITHUB ACTIONS + DVC + AIRFLOW</span>
+                <h3 class="text-base font-bold text-white">CI/CD &amp; Continuous Training (CT) Simulator</h3>
+              </div>
+              <button type="button" id="triggerCicdBtn" class="px-3 py-1 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-mono text-xs font-semibold transition">
+                ⚡ Trigger CT Pipeline
+              </button>
+            </div>
+
+            <div class="space-y-2 text-xs font-mono" id="cicdStagesList">
+              <div data-cicd-step="1" class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <span>1. GitHub Code Commit &amp; DVC Data Sync</span>
+                <span class="cicd-badge text-emerald-400">✓ PASSED</span>
+              </div>
+              <div data-cicd-step="2" class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <span>2. Unit Tests + Shadow Inference Shape (50,14)</span>
+                <span class="cicd-badge text-emerald-400">✓ PASSED</span>
+              </div>
+              <div data-cicd-step="3" class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <span>3. Airflow DAG (30-Day / Concept Drift Refit)</span>
+                <span class="cicd-badge text-sky-400">✓ RMSE 14.2</span>
+              </div>
+              <div data-cicd-step="4" class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <span>4. Safety Score Gate ➔ AWS ECR &amp; EKS Rolling Update</span>
+                <span class="cicd-badge text-emerald-400">✓ DEPLOYED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 5: SOFTWARE ROI CALCULATOR, TIMELINE & RESEARCH BASE (Sec 3,5-8,34-38)-->
+    <!-- ========================================================================= -->
+    <section id="view-impact" class="workspace-view hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Interactive Financial ROI & Downtime Savings Calculator (Sections 3 & 35) -->
+        <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4">
+          <div>
+            <span class="text-xs font-mono text-emerald-400">SECTIONS 3 &amp; 35 • FINANCIAL &amp; OPERATIONAL IMPACT</span>
+            <h2 class="text-lg font-bold text-white mt-0.5">Interactive Predictive Maintenance ROI Simulator</h2>
+            <p class="text-xs text-slate-400">Calculate net annual savings from transitioning unplanned reactive failures ($50,000/hr) to scheduled predictive interventions ($5,000/hr).</p>
+          </div>
+
+          <div class="space-y-3 bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-300">Prevented Unplanned Spindle Incidents / Year:</span>
+                <span id="roiIncidentsLabel" class="text-sky-400 font-bold">4 incidents</span>
+              </div>
+              <input id="roiIncidentsSlider" type="range" min="1" max="20" value="4" class="w-full accent-sky-400 cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-300">Prevented Catastrophic Secondary Machine Replacements:</span>
+                <span id="roiSecondaryLabel" class="text-emerald-400 font-bold">1 machine ($150k)</span>
+              </div>
+              <input id="roiSecondarySlider" type="range" min="0" max="5" value="1" class="w-full accent-emerald-400 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 font-mono">
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+              <div class="text-[11px] text-slate-400">DOWNTIME SAVINGS ($45k/inc)</div>
+              <div id="roiDowntimeVal" class="text-xl font-bold text-white mt-1">$180,000</div>
+            </div>
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/40">
+              <div class="text-[11px] text-emerald-300">TOTAL NET ANNUAL SAVINGS</div>
+              <div id="roiTotalVal" class="text-xl font-bold text-emerald-400 mt-1">$330,000</div>
+            </div>
+          </div>
+
+          <!-- Software Budget Breakdown Table (Section 35) -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 font-mono">
+                  <th class="py-2">Software / Cloud Resource (16-Wk Pilot)</th>
+                  <th class="py-2">Specification</th>
+                  <th class="py-2 text-right">Cost (USD)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/70">
+                <tr>
+                  <td class="py-2 font-semibold text-sky-300">Cloud Infrastructure</td>
+                  <td class="py-2 text-slate-300">AWS EKS, Kafka MSK, EC2 p3 GPU instances (4 mos)</td>
+                  <td class="py-2 text-right font-mono text-white">$18,500</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-semibold text-indigo-300">Software Licenses</td>
+                  <td class="py-2 text-slate-300">InfluxDB Enterprise, BI &amp; Alerting Connectors</td>
+                  <td class="py-2 text-right font-mono text-white">$5,000</td>
+                </tr>
+                <tr class="bg-slate-900/60">
+                  <td class="py-2 font-bold text-emerald-400">Software &amp; Cloud Sub-Total</td>
+                  <td class="py-2 text-slate-400">Covered 1.9x by preventing a single $45k incident</td>
+                  <td class="py-2 text-right font-mono font-bold text-emerald-400">$23,500</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: 16-Week Agile Software Sprint Roadmap & Base Paper Foundations (Sections 5, 6, 8, 34) -->
+        <div class="lg:col-span-6 space-y-6">
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <span class="text-xs font-mono text-sky-400">SECTION 34 • 16-WEEK AGILE SOFTWARE DELIVERY ROADMAP</span>
+            <h3 class="text-base font-bold text-white">4-Sprint Software Engineering Execution Plan</h3>
+            <div class="space-y-2.5 text-xs">
+              <div class="p-3 rounded-xl bg-slate-900/90 border-l-4 border-l-sky-400">
+                <div class="flex justify-between font-mono font-bold text-white">
+                  <span>Phase 1: MQTT &amp; Kafka Network Routing</span>
+                  <span class="text-sky-400">Weeks 1–4</span>
+                </div>
+                <p class="text-slate-400 mt-1">Configure mTLS certificate auth, payload anonymization, and Kafka topic partitioning.</p>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/90 border-l-4 border-l-indigo-400">
+                <div class="flex justify-between font-mono font-bold text-white">
+                  <span>Phase 2: Data Warehouse &amp; Baseline Model</span>
+                  <span class="text-indigo-400">Weeks 5–8</span>
+                </div>
+                <p class="text-slate-400 mt-1">Deploy PostgreSQL &amp; InfluxDB schemas, Python preprocessing pipelines, and Random Forest baseline (22.5 RMSE).</p>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/90 border-l-4 border-l-emerald-400">
+                <div class="flex justify-between font-mono font-bold text-white">
+                  <span>Phase 3: Deep LSTM Dev &amp; Custom Loss</span>
+                  <span class="text-emerald-400">Weeks 9–12</span>
+                </div>
+                <p class="text-slate-400 mt-1">Dual-layer LSTM tuning on cloud GPUs, Piecewise Linear RUL target, and PHM08 asymmetric safety scoring.</p>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/90 border-l-4 border-l-amber-400">
+                <div class="flex justify-between font-mono font-bold text-white">
+                  <span>Phase 4: Docker, EKS Deployment &amp; UI Release</span>
+                  <span class="text-amber-400">Weeks 13–16</span>
+                </div>
+                <p class="text-slate-400 mt-1">Containerize FastAPI &amp; TFS microservices, configure Kubernetes HPA, and release Supervisor UI Dashboard.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Foundational Academic Papers & Portals (Sections 5, 6, 8, 38) -->
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <span class="text-xs font-mono text-indigo-400">SECTIONS 5, 6, 8 &amp; 38 • ACADEMIC &amp; BENCHMARK FOUNDATIONS</span>
+            <h3 class="text-base font-bold text-white">Peer-Reviewed Deep Learning References</h3>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+                <strong class="text-white">Zhao et al. (2019)</strong> — <em>"Deep Learning and Its Applications to Machine Health Monitoring"</em> (IEEE Trans. Industrial Electronics). Proves RNN/LSTM superiority over CNNs for sequential cumulative degradation.
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+                <strong class="text-white">Wu et al. (2018)</strong> — <em>"Data-Driven Remaining Useful Life Prediction via Multiple Sensor Signals and Deep LSTM Neural Network"</em> (IEEE/ASME Trans. Mechatronics). Introduces Multi-Sensor Fusion, Spatial Dropout, and Piecewise Linear RUL on NASA C-MAPSS.
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+                <strong class="text-white">Saxena et al. (2008)</strong> — <em>"Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation"</em> (NASA Prognostics Data Repository &amp; PHM08 Safety Score).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- WORK ORDER / PAGERDUTY TICKET DISPATCH MODAL -->
+  <div id="ticketModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 border border-rose-500/40 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+          <h3 class="text-base font-bold text-white font-mono">SAP PM &amp; PagerDuty Automated Dispatch</h3>
+        </div>
+        <button type="button" id="closeModalBtn" class="text-slate-400 hover:text-white text-sm font-mono">✕ ESC</button>
+      </div>
+      <div id="ticketModalBody" class="space-y-3 text-xs font-mono text-slate-300">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" id="confirmDispatchBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono transition">
+          ✓ Confirm &amp; Write to PostgreSQL maintenance_logs
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="appToast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-slate-900/95 border border-sky-500/50 text-xs font-mono text-white shadow-2xl flex items-center gap-2.5">
+    <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+    <span id="appToastText">Notification</span>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/90 py-4 px-4 sm:px-6 text-xs text-slate-500 font-mono">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <span>AegisPdM Software Suite • End-to-End Deep Learning (LSTM) &amp; Cloud Streaming Framework</span>
+      <span>TensorFlow 2.10 • Apache Kafka • InfluxDB • PostgreSQL • FastAPI • Kubernetes HPA</span>
+    </div>
+  </footer>
+
+  <!-- COMPLETE APPLICATION LOGIC -->
+  <script>
+    (function() {
+      // --- 1. STATE & GROUND-TRUTH DATA FROM REPORT ---
+      const machines = [
+        {
+          id: 'CNC_Milling_04',
+          component: 'Spindle Bearing',
+          rulHours: 11.5,
+          rulCycles: 84,
+          status: 'CRITICAL',
+          confidence: 94.8,
+          rpm: 12000,
+          load: 85.5,
+          regime: 'Cluster #2 (12,000 RPM / 85.5% Load - Titanium)',
+          rms: 0.048,
+          kurtosis: 5.82,
+          crest: 4.1,
+          temp: 65.2,
+          partition: 'Partition #04',
+          vibX: [0.012, 0.015, -0.011, 0.019, -0.014],
+          vibY: [0.005, 0.007, -0.002, 0.009, -0.004],
+          vibZ: [0.045, 0.050, -0.041, 0.053, -0.047]
+        },
+        {
+          id: 'CNC_Lathe_12',
+          component: 'Drive Belt & Spindle',
+          rulHours: 85.0,
+          rulCycles: 112,
+          status: 'NORMAL',
+          confidence: 97.2,
+          rpm: 9500,
+          load: 62.0,
+          regime: 'Cluster #1 (9,500 RPM / 62.0% Load - Aluminum)',
+          rms: 0.014,
+          kurtosis: 2.94,
+          crest: 2.3,
+          temp: 48.4,
+          partition: 'Partition #12',
+          vibX: [0.004, 0.005, -0.003, 0.004, -0.002],
+          vibY: [0.002, 0.003, -0.001, 0.002, -0.002],
+          vibZ: [0.011, 0.013, -0.009, 0.012, -0.010]
+        },
+        {
+          id: 'CNC_Milling_01',
+          component: 'Tool Wear & Bearing',
+          rulHours: 92.0,
+          rulCycles: 121,
+          status: 'NORMAL',
+          confidence: 98.1,
+          rpm: 10800,
+          load: 71.0,
+          regime: 'Cluster #1 (10,800 RPM / 71.0% Load - Steel)',
+          rms: 0.012,
+          kurtosis: 2.75,
+          crest: 2.1,
+          temp: 46.8,
+          partition: 'Partition #01',
+          vibX: [0.003, 0.004, -0.003, 0.003, -0.002],
+          vibY: [0.002, 0.002, -0.001, 0.002, -0.001],
+          vibZ: [0.009, 0.011, -0.008, 0.010, -0.009]
+        },
+        {
+          id: 'CNC_Grinder_07',
+          component: 'Main Shaft Bearing',
+          rulHours: 104.0,
+          rulCycles: 125,
+          status: 'NORMAL',
+          confidence: 99.0,
+          rpm: 14000,
+          load: 54.0,
+          regime: 'Cluster #3 (14,000 RPM / 54.0% Load - Precision Finish)',
+          rms: 0.009,
+          kurtosis: 2.61,
+          crest: 1.9,
+          temp: 43.1,
+          partition: 'Partition #07',
+          vibX: [0.002, 0.003, -0.002, 0.002, -0.001],
+          vibY: [0.001, 0.002, -0.001, 0.001, -0.001],
+          vibZ: [0.007, 0.008, -0.006, 0.008, -0.007]
+        },
+        {
+          id: 'CNC_Boring_19',
+          component: 'Spindle Housing',
+          rulHours: 78.5,
+          rulCycles: 103,
+          status: 'NORMAL',
+          confidence: 95.6,
+          rpm: 8200,
+          load: 79.5,
+          regime: 'Cluster #2 (8,200 RPM / 79.5% Load - Heavy Cast)',
+          rms: 0.018,
+          kurtosis: 3.12,
+          crest: 2.6,
+          temp: 52.0,
+          partition: 'Partition #19',
+          vibX: [0.006, 0.007, -0.005, 0.006, -0.004],
+          vibY: [0.003, 0.004, -0.002, 0.003, -0.003],
+          vibZ: [0.015, 0.017, -0.014, 0.016, -0.013]
+        },
+        {
+          id: 'CNC_Mill_28',
+          component: 'Spindle Telemetry Gateway',
+          rulHours: 0,
+          rulCycles: 0,
+          status: 'OFFLINE',
+          confidence: 0,
+          rpm: 0,
+          load: 0,
+          regime: 'Offline — Sequence Break (>3s gap state reset)',
+          rms: 0.000,
+          kurtosis: 0.00,
+          crest: 0.0,
+          temp: 24.0,
+          partition: 'Partition #28',
+          vibX: [0, 0, 0, 0, 0],
+          vibY: [0, 0, 0, 0, 0],
+          vibZ: [0, 0, 0, 0, 0]
+        }
+      ];
+
+      // Generate all 42 machines for the mini matrix (39 Normal, 1 Critical, 2 Offline)
+      const fleet42 = [];
+      for (let i = 1; i <= 42; i++) {
+        const idStr = 'CNC_' + String(i).padStart(2, '0');
+        let st = 'NORMAL';
+        if (i === 4) st = 'CRITICAL';
+        else if (i === 28 || i === 37) st = 'OFFLINE';
+        fleet42.push({ index: i, code: idStr, status: st });
+      }
+
+      let selectedMachine = machines[0];
+      let currentFilter = 'ALL';
+      let streamActive = true;
+      let spikeInjected = false;
+      let networkGapSimulated = false;
+      let ticketCounter = 8849;
+
+      const maintenanceLogs = [
+        { log_id: 'TCK-8849', machine_id: 'CNC_Milling_04', action_taken: 'PagerDuty Alert #8849: Spindle Bearing RUL < 12h', date: '2026-10-27 11:40:12', cost: '$5,000 (Scheduled)' },
+        { log_id: 'TCK-8812', machine_id: 'CNC_Lathe_12', action_taken: 'Bi-annual IEPE Calibration & Belt Tension Check', date: '2026-10-19 08:15:00', cost: '$1,200 (Preventative)' },
+        { log_id: 'TCK-8790', machine_id: 'CNC_Milling_01', action_taken: 'Replaced Inner Race Bearing at RUL=18h', date: '2026-10-11 14:22:10', cost: '$5,000 (Saved $45k)' }
+      ];
+
+      // --- 2. TOAST HELPER ---
+      let toastTimer = null;
+      function showToast(msg) {
+        const toast = document.getElementById('appToast');
+        const text = document.getElementById('appToastText');
+        if (!toast || !text) return;
+        text.textContent = msg;
+        toast.classList.remove('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 3800);
+      }
+
+      // --- 3. NAVIGATION WORKSPACE TABS ---
+      const navButtons = document.querySelectorAll('.nav-tab');
+      const views = document.querySelectorAll('.workspace-view');
+      function switchView(targetKey) {
+        navButtons.forEach(btn => {
+          if (btn.getAttribute('data-nav') === targetKey) {
+            btn.classList.add('tab-active');
+            btn.classList.remove('text-slate-300');
+          } else {
+            btn.classList.remove('tab-active');
+            btn.classList.add('text-slate-300');
+          }
+        });
+        views.forEach(v => {
+          if (v.id === 'view-' + targetKey) {
+            v.classList.remove('hidden');
+          } else {
+            v.classList.add('hidden');
+          }
+        });
+        // Resize charts when tab becomes visible
+        if (targetKey === 'dashboard' && degradationChartInstance) {
+          degradationChartInstance.resize();
+        }
+        if (targetKey === 'lstm') {
+          if (asymmetricChartInstance) asymmetricChartInstance.resize();
+          if (trainingChartInstance) trainingChartInstance.resize();
+        }
+      }
+
+      navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          switchView(btn.getAttribute('data-nav'));
+        });
+      });
+
+      document.getElementById('heroJumpArchBtn').addEventListener('click', () => {
+        switchView('pipeline');
+      });
+      document.getElementById('heroJumpCodeBtn').addEventListener('click', () => {
+        switchView('code');
+      });
+      document.getElementById('heroSimulateBtn').addEventListener('click', () => {
+        switchView('dashboard');
+        selectMachineById('CNC_Milling_04');
+        showToast('Invoked TensorFlow Serving v1.2.0-lstm on CNC_Milling_04 (RUL: 11.5 hrs - CRITICAL)');
+      });
+
+      // --- 4. HERO BACKGROUND ANIMATED NEURAL CANVAS ---
+      const heroCanvas = document.getElementById('heroNeuralCanvas');
+      const heroCtx = heroCanvas.getContext('2d');
+      let heroNodes = [];
+      function resizeHeroCanvas() {
+        const rect = heroCanvas.parentElement.getBoundingClientRect();
+        heroCanvas.width = rect.width || 1200;
+        heroCanvas.height = rect.height || 320;
+        heroNodes = [];
+        for (let i = 0; i < 28; i++) {
+          heroNodes.push({
+            x: Math.random() * heroCanvas.width,
+            y: Math.random() * heroCanvas.height,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.6,
+            r: 2 + Math.random() * 2
+          });
+        }
+      }
+      function drawHeroCanvas() {
+        if (!heroCtx) return;
+        heroCtx.clearRect(0, 0, heroCanvas.width, heroCanvas.height);
+        for (let i = 0; i < heroNodes.length; i++) {
+          const n = heroNodes[i];
+          n.x += n.vx;
+          n.y += n.vy;
+          if (n.x < 0 || n.x > heroCanvas.width) n.vx *= -1;
+          if (n.y < 0 || n.y > heroCanvas.height) n.vy *= -1;
+          heroCtx.beginPath();
+          heroCtx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          heroCtx.fillStyle = 'rgba(56, 189, 248, 0.55)';
+          heroCtx.fill();
+          for (let j = i + 1; j < heroNodes.length; j++) {
+            const m = heroNodes[j];
+            const dist = Math.hypot(n.x - m.x, n.y - m.y);
+            if (dist < 140) {
+              heroCtx.beginPath();
+              heroCtx.moveTo(n.x, n.y);
+              heroCtx.lineTo(m.x, m.y);
+              heroCtx.strokeStyle = 'rgba(99, 102, 241, ' + (1 - dist / 140) * 0.25 + ')';
+              heroCtx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(drawHeroCanvas);
+      }
+
+      // --- 5. VIEW 1: MACHINE LIST, MINI MATRIX & LIVE TELEMETRY ---
+      function renderMachineList() {
+        const container = document.getElementById('machineListContainer');
+        const query = (document.getElementById('machineSearchInput').value || '').toLowerCase();
+        container.innerHTML = '';
+
+        const filtered = machines.filter(m => {
+          const matchesFilter = currentFilter === 'ALL' || m.status === currentFilter;
+          const matchesQuery = m.id.toLowerCase().includes(query) || m.component.toLowerCase().includes(query);
+          return matchesFilter && matchesQuery;
+        });
+
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="p-4 text-center text-xs font-mono text-slate-500">No machines in this RUL filter state.</div>';
+          return;
+        }
+
+        filtered.forEach(m => {
+          const isSelected = m.id === selectedMachine.id;
+          let badgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          if (m.status === 'CRITICAL') badgeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+          else if (m.status === 'WARNING') badgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+          else if (m.status === 'OFFLINE') badgeClass = 'bg-slate-800 text-slate-400 border-slate-700';
+
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-2 ' +
+            (isSelected ? 'bg-sky-500/15 border-sky-400 shadow-md' : 'bg-slate-900/75 hover:bg-slate-900 border-slate-800');
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-sm text-white">${m.id}</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${badgeClass}">${m.status}</span>
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">${m.component} • RMS: <span class="font-mono text-slate-200">${m.rms.toFixed(3)}g</span></div>
+            </div>
+            <div class="text-right font-mono">
+              <div class="text-sm font-bold ${m.status === 'CRITICAL' ? 'text-rose-400' : m.status === 'WARNING' ? 'text-amber-400' : 'text-emerald-400'}">
+                ${m.status === 'OFFLINE' ? 'OFFLINE' : m.rulHours.toFixed(1) + ' hrs'}
+              </div>
+              <div class="text-[10px] text-slate-500">${m.status === 'OFFLINE' ? 'No stream' : m.rulCycles + ' cycles'}</div>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            selectMachineById(m.id);
+          });
+          container.appendChild(card);
+        });
+      }
+
+      function renderMiniFleetMatrix() {
+        const grid = document.getElementById('miniFleetGrid');
+        grid.innerHTML = '';
+        fleet42.forEach(node => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          let color = 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/40';
+          if (node.status === 'CRITICAL') color = 'bg-rose-500/40 border-rose-400 text-white animate-pulse';
+          else if (node.status === 'WARNING') color = 'bg-amber-500/30 border-amber-400 text-amber-200';
+          else if (node.status === 'OFFLINE') color = 'bg-slate-800 border-slate-700 text-slate-500';
+
+          btn.className = `py-1 rounded text-[10px] font-mono border transition ${color}`;
+          btn.textContent = String(node.index).padStart(2, '0');
+          btn.title = `${node.code} (${node.status})`;
+          btn.addEventListener('click', () => {
+            if (node.index === 4) selectMachineById('CNC_Milling_04');
+            else if (node.index === 12) selectMachineById('CNC_Lathe_12');
+            else if (node.index === 1) selectMachineById('CNC_Milling_01');
+            else if (node.index === 7) selectMachineById('CNC_Grinder_07');
+            else if (node.index === 19) selectMachineById('CNC_Boring_19');
+            else if (node.index === 28) selectMachineById('CNC_Mill_28');
+            else {
+              selectMachineById('CNC_Lathe_12');
+              showToast(`Inspecting Kafka Partition #${String(node.index).padStart(2, '0')} (${node.status} - RUL > 72h)`);
+            }
+          });
+          grid.appendChild(btn);
+        });
+      }
+
+      function updateJsonPayloads() {
+        const m = selectedMachine;
+        const nowIso = new Date().toISOString().split('.')[0] + 'Z';
+        document.getElementById('liveClockDisplay').textContent = nowIso;
+
+        const inputObj = {
+          machine_id: m.id,
+          timestamp: nowIso,
+          operational_settings: { rpm: m.rpm, load: m.load },
+          sensor_data: {
+            vib_x: m.vibX,
+            vib_y: m.vibY,
+            vib_z: m.vibZ,
+            temp_c: m.temp
+          }
+        };
+        const outputObj = {
+          machine_id: m.id,
+          timestamp: nowIso,
+          prediction: {
+            predicted_rul_cycles: m.rulCycles,
+            predicted_rul_hours: m.rulHours,
+            health_status: m.status,
+            model_version: 'v1.2.0-lstm'
+          }
+        };
+        document.getElementById('liveJsonInputPre').textContent = JSON.stringify(inputObj, null, 2);
+        document.getElementById('liveJsonOutputPre').textContent = JSON.stringify(outputObj, null, 2);
+      }
+
+      let degradationChartInstance = null;
+      function updateDegradationChart() {
+        const ctx = document.getElementById('degradationChart').getContext('2d');
+        const labels = [];
+        const rulSeries = [];
+        const rmsSeries = [];
+        const isCrit = selectedMachine.status === 'CRITICAL';
+
+        for (let c = 0; c <= 250; c += 10) {
+          labels.push('Cyc ' + c);
+          // Piecewise linear RUL capped at 125 for first 125 cycles, then linear drop
+          const rul = c <= 125 ? 125 : Math.max(isCrit ? 11 : 65, 125 - (c - 125) * (isCrit ? 0.92 : 0.45));
+          rulSeries.push(Number(rul.toFixed(1)));
+          // Exponential vibration RMS growth
+          const baseRms = 0.008 + (c > 125 ? Math.pow((c - 125) / 125, 2.3) * (isCrit ? 0.045 : 0.012) : 0.002 * Math.sin(c));
+          rmsSeries.push(Number(baseRms.toFixed(4)));
+        }
+
+        if (degradationChartInstance) {
+          degradationChartInstance.data.labels = labels;
+          degradationChartInstance.data.datasets[0].data = rulSeries;
+          degradationChartInstance.data.datasets[1].data = rmsSeries;
+          degradationChartInstance.update();
+          return;
+        }
+
+        degradationChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Predicted Piecewise Linear RUL (Cycles)',
+                data: rulSeries,
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                yAxisID: 'yRul',
+                tension: 0.2,
+                fill: true,
+                pointRadius: 2
+              },
+              {
+                label: 'Vibration RMS Energy (EMA Smoothed g)',
+                data: rmsSeries,
+                borderColor: '#f43f5e',
+                backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                yAxisID: 'yRms',
+                tension: 0.35,
+                pointRadius: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { labels: { color: '#cbd5e1', font: { family: 'JetBrains Mono', size: 11 } } }
+            },
+            scales: {
+              x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.25)' } },
+              yRul: {
+                type: 'linear',
+                position: 'left',
+                title: { display: true, text: 'Predicted RUL (Cycles)', color: '#38bdf8', font: { size: 10 } },
+                ticks: { color: '#38bdf8', font: { size: 10 } },
+                grid: { color: 'rgba(51, 65, 85, 0.25)' }
+              },
+              yRms: {
+                type: 'linear',
+                position: 'right',
+                title: { display: true, text: 'Vibration RMS (g)', color: '#f43f5e', font: { size: 10 } },
+                ticks: { color: '#f43f5e', font: { size: 10 } },
+                grid: { drawOnChartArea: false }
+              }
+            }
+          }
+        });
+      }
+
+      function selectMachineById(id) {
+        const found = machines.find(m => m.id === id);
+        if (!found) return;
+        selectedMachine = found;
+        document.getElementById('detailMachineId').textContent = found.id;
+        document.getElementById('detailComponentSub').innerHTML =
+          `Component: <strong class="text-slate-200">${found.component}</strong> • Operating Regime: <strong class="text-sky-300">${found.regime}</strong>`;
+        document.getElementById('selectedPartitionLabel').textContent = found.partition;
+
+        const badge = document.getElementById('detailStatusBadge');
+        if (found.status === 'CRITICAL') {
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40';
+          badge.textContent = 'CRITICAL • RUL < 24H';
+        } else if (found.status === 'WARNING') {
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          badge.textContent = 'WARNING • RUL 24–72H';
+        } else if (found.status === 'OFFLINE') {
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700';
+          badge.textContent = 'OFFLINE • SEQUENCE RESET';
+        } else {
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          badge.textContent = 'NORMAL • RUL > 72H';
+        }
+
+        document.getElementById('detailRulHours').innerHTML = `${found.rulHours.toFixed(1)} hrs <span class="text-xs text-slate-400">(${found.rulCycles} cyc)</span>`;
+        document.getElementById('detailConfidence').textContent = found.confidence.toFixed(1) + '%';
+        document.getElementById('detailRmsVal').textContent = found.rms.toFixed(3) + ' g';
+        document.getElementById('detailKurtosisVal').textContent = found.kurtosis.toFixed(2);
+        document.getElementById('detailCrestTemp').textContent = `${found.crest.toFixed(1)}x • ${found.temp.toFixed(1)}°C`;
+
+        renderMachineList();
+        updateJsonPayloads();
+        updateDegradationChart();
+      }
+
+      // Filter buttons
+      document.querySelectorAll('.fleet-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.getAttribute('data-filter');
+          document.querySelectorAll('.fleet-filter-btn').forEach(b => b.classList.remove('border-sky-500/50'));
+          btn.classList.add('border-sky-500/50');
+          renderMachineList();
+        });
+      });
+
+      document.getElementById('machineSearchInput').addEventListener('input', renderMachineList);
+
+      // Live Telemetry Waveform Canvas Animation
+      const waveCanvas = document.getElementById('liveTelemetryCanvas');
+      const waveCtx = waveCanvas.getContext('2d');
+      let wavePhase = 0;
+
+      function resizeWaveCanvas() {
+        const rect = waveCanvas.parentElement.getBoundingClientRect();
+        waveCanvas.width = rect.width || 600;
+        waveCanvas.height = rect.height || 160;
+      }
+
+      function drawWaveCanvas() {
+        if (waveCtx) {
+          const w = waveCanvas.width;
+          const h = waveCanvas.height;
+          waveCtx.clearRect(0, 0, w, h);
+
+          // Subtle horizontal grid lines
+          waveCtx.strokeStyle = 'rgba(51, 65, 85, 0.35)';
+          waveCtx.lineWidth = 1;
+          for (let y = 25; y < h; y += 35) {
+            waveCtx.beginPath();
+            waveCtx.moveTo(0, y);
+            waveCtx.lineTo(w, y);
+            waveCtx.stroke();
+          }
+
+          if (selectedMachine.status !== 'OFFLINE' && !networkGapSimulated) {
+            const ampScale = selectedMachine.status === 'CRITICAL' ? 38 : 16;
+            const channels = [
+              { color: '#38bdf8', freq: 0.05, mult: 1.0, offset: 0 },
+              { color: '#818cf8', freq: 0.08, mult: 0.65, offset: 1.5 },
+              { color: '#f43f5e', freq: 0.11, mult: 1.25, offset: 3.1 }
+            ];
+
+            channels.forEach(ch => {
+              waveCtx.beginPath();
+              waveCtx.strokeStyle = ch.color;
+              waveCtx.lineWidth = 1.6;
+              for (let x = 0; x < w; x += 3) {
+                let y = h / 2 + Math.sin(x * ch.freq + wavePhase + ch.offset) * ampScale * ch.mult
+                        + Math.cos(x * 0.19 - wavePhase) * (ampScale * 0.35);
+                if (spikeInjected && x > w * 0.45 && x < w * 0.52) {
+                  y = 12; // Adversarial spike before Z-score drop
+                }
+                if (x === 0) waveCtx.moveTo(x, y);
+                else waveCtx.lineTo(x, y);
+              }
+              waveCtx.stroke();
+            });
+
+            // EMA Smoothed Trend Line
+            waveCtx.beginPath();
+            waveCtx.setLineDash([5, 5]);
+            waveCtx.strokeStyle = '#fcd34d';
+            waveCtx.lineWidth = 2;
+            for (let x = 0; x < w; x += 4) {
+              const y = h / 2 + Math.sin(x * 0.025 + wavePhase * 0.5) * (ampScale * 0.55);
+              if (x === 0) waveCtx.moveTo(x, y);
+              else waveCtx.lineTo(x, y);
+            }
+            waveCtx.stroke();
+            waveCtx.setLineDash([]);
+          } else {
+            waveCtx.fillStyle = '#94a3b8';
+            waveCtx.font = '12px "JetBrains Mono", monospace';
+            waveCtx.fillText('SEQUENCE BREAK (>3s Network Drop) — LSTM Internal Cell State Reset', 24, h / 2);
+          }
+
+          if (streamActive) {
+            wavePhase += 0.12;
+          }
+        }
+        requestAnimationFrame(drawWaveCanvas);
+      }
+
+      // Stream Controls
+      document.getElementById('toggleStreamBtn').addEventListener('click', () => {
+        streamActive = !streamActive;
+        const dot = document.getElementById('streamStatusDot');
+        const label = document.getElementById('streamStatusLabel');
+        if (streamActive) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          label.textContent = 'STREAM: LIVE (50-Tick Window)';
+          showToast('Resumed real-time Kafka telemetry consumption.');
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+          label.textContent = 'STREAM: PAUSED (Buffer Locked)';
+          showToast('Paused sliding window buffer in Redis.');
+        }
+      });
+
+      document.getElementById('injectSpikeBtn').addEventListener('click', () => {
+        spikeInjected = true;
+        const banner = document.getElementById('streamEventBanner');
+        banner.textContent = '⚡ Z-Score > 3.0 Anomaly Detected & Dropped (Sec 31)';
+        banner.classList.remove('hidden');
+        showToast('Section 31 Adversarial Check: Physically impossible sensor spike intercepted and dropped before LSTM.');
+        setTimeout(() => {
+          spikeInjected = false;
+          banner.classList.add('hidden');
+        }, 2600);
+      });
+
+      document.getElementById('simulateGapBtn').addEventListener('click', () => {
+        networkGapSimulated = true;
+        const banner = document.getElementById('streamEventBanner');
+        banner.textContent = '📡 >3.0s Gap: Sequence Break & LSTM State Reset (Sec 12)';
+        banner.classList.remove('hidden');
+        showToast('Section 12 Imputation Rule: Gap > 3s detected. Sequence broken & LSTM state reset to prevent false pattern learning.');
+        setTimeout(() => {
+          networkGapSimulated = false;
+          banner.classList.add('hidden');
+        }, 2800);
+      });
+
+      // Work Order Modal
+      const ticketModal = document.getElementById('ticketModal');
+      document.getElementById('dispatchWorkOrderBtn').addEventListener('click', () => {
+        ticketCounter++;
+        const body = document.getElementById('ticketModalBody');
+        body.innerHTML = `
+          <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+            <div><span class="text-slate-500">ENDPOINT:</span> <span class="text-emerald-400">POST https://events.pagerduty.com/v2/enqueue (SAP PM Bridge)</span></div>
+            <div><span class="text-slate-500">TICKET ID:</span> <span class="text-white font-bold">#${ticketCounter}</span></div>
+            <div><span class="text-slate-500">MACHINE ID:</span> <span class="text-sky-400 font-bold">${selectedMachine.id} (${selectedMachine.component})</span></div>
+            <div><span class="text-slate-500">PREDICTED RUL:</span> <span class="text-rose-400 font-bold">${selectedMachine.rulHours} hours (${selectedMachine.rulCycles} cycles)</span></div>
+            <div><span class="text-slate-500">EST. COST SAVINGS:</span> <span class="text-emerald-400">$45,000 ($5,000 scheduled vs. $50,000 unplanned crash)</span></div>
+          </div>
+          <pre class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-emerald-300">[ALERT] ${selectedMachine.id} RUL fell below threshold.
+[ACTION] Dispatching maintenance ticket via PagerDuty API...
+[HTTP 200] Ticket #${ticketCounter} staged for PostgreSQL commit.</pre>
+        `;
+        ticketModal.classList.remove('hidden');
+      });
+
+      document.getElementById('closeModalBtn').addEventListener('click', () => {
+        ticketModal.classList.add('hidden');
+      });
+
+      document.getElementById('confirmDispatchBtn').addEventListener('click', () => {
+        maintenanceLogs.unshift({
+          log_id: 'TCK-' + ticketCounter,
+          machine_id: selectedMachine.id,
+          action_taken: `PagerDuty #${ticketCounter}: Targeted ${selectedMachine.component} Replacement`,
+          date: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          cost: '$5,000 (Scheduled)'
+        });
+        ticketModal.classList.add('hidden');
+        renderDbTable('pg_logs');
+        showToast(`[HTTP 200] Ticket #${ticketCounter} created and logged to PostgreSQL maintenance_logs!`);
+      });
+
+      // --- 6. VIEW 2: ARCHITECTURE STAGE INSPECTOR, PREPROCESSING & DB LAB ---
+      const stageSpecs = {
+        mqtt: {
+          title: '01. MQTT Broker & Zero-Trust Edge Anonymizer (Sections 10 & 31)',
+          protocol: 'MQTT over mutual TLS (mTLS) • X.509 Certificate Auth',
+          throughput: '10kHz Nyquist sampling (up to 5kHz bearing fault harmonics) ➔ ~120 MB/min per machine',
+          details: 'Strips sensitive contextual metadata (CAD part file names, client order numbers) before packets leave the factory floor, replacing them with abstract identifiers like Machine_04_Sensor_1.'
+        },
+        kafka: {
+          title: '02. Go Ingestion Pod & Partitioned Apache Kafka Stream (Sections 26 & 32)',
+          protocol: 'Golang MQTT Consumer ➔ Apache Kafka Topic: machine_telemetry',
+          throughput: 'Partitioned by hash(machine_id) for strict chronological sequence ordering',
+          details: 'Decouples high-frequency telemetry producers from ML consumers. Hashing machine_id guarantees all ticks from CNC_Milling_04 land on the same partition in exact temporal order for LSTM input.'
+        },
+        prep: {
+          title: '03. Python/Pandas Data Prep Pod & Redis 50-Tick Sliding Window (Sections 12, 14, 26, 31)',
+          protocol: 'Pandas + Scikit-Learn MinMaxScaler + Redis In-Memory Sliding Buffer',
+          throughput: '50-step overlapping windows (t=1..50, t=2..51) × 14 features (RMS, Kurtosis, Crest Factor)',
+          details: 'Applies Z-score anomaly detection to drop loose-wire adversarial spikes, Forward-Fills gaps <3s, resets sequence state on gaps >3s, and normalizes channels to [0, 1].'
+        },
+        tfs: {
+          title: '04. TensorFlow Serving (C++) Inference Pod & Kubernetes HPA (Sections 26 & 32)',
+          protocol: 'gRPC Low-Latency Binary Protocol • TensorFlow SavedModel Format',
+          throughput: 'Network-layer auto-batching • Zero-downtime model hot-swapping • HPA @ >70% CPU',
+          details: 'Written in C++ for sub-5ms inference. When CPU utilization exceeds 70% (e.g., 50 new machines come online), Kubernetes Horizontal Pod Autoscaler automatically spins up replica pods.'
+        },
+        db: {
+          title: '05. Polyglot Persistence (InfluxDB + PostgreSQL) & Node.js Alerting (Sections 11, 26, 28, 32)',
+          protocol: 'InfluxDB (Unix Epoch Nanoseconds) + PostgreSQL + FastAPI (:8000) + Node.js Webhooks',
+          throughput: 'InfluxDB keeps 7-day raw 10kHz data ➔ Continuous Query downsamples to 1-min averages',
+          details: 'Prevents storage cost explosion while preserving macro-degradation history. Node.js notification pod watches RUL predictions and dispatches PagerDuty/SAP PM alerts when RUL < 48h / < 12h.'
+        }
+      };
+
+      function renderArchStage(key) {
+        const spec = stageSpecs[key];
+        const box = document.getElementById('archStageDetailBox');
+        box.innerHTML = `
+          <div class="lg:col-span-8 space-y-1.5">
+            <div class="text-xs font-mono text-sky-400">${spec.protocol}</div>
+            <h4 class="text-base font-bold text-white">${spec.title}</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">${spec.details}</p>
+          </div>
+          <div class="lg:col-span-4 bg-slate-900 p-3.5 rounded-xl border border-slate-800 font-mono text-xs">
+            <div class="text-[10px] text-slate-400">THROUGHPUT &amp; SCALING SPEC</div>
+            <div class="text-emerald-400 font-semibold mt-1">${spec.throughput}</div>
+          </div>
+        `;
+      }
+
+      document.querySelectorAll('.arch-stage-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.arch-stage-btn').forEach(b => {
+            b.classList.remove('border-2', 'border-sky-500');
+            b.classList.add('border', 'border-slate-800');
+          });
+          btn.classList.remove('border', 'border-slate-800');
+          btn.classList.add('border-2', 'border-sky-500');
+          renderArchStage(btn.getAttribute('data-stage'));
+        });
+      });
+
+      document.getElementById('archModeCloudBtn').addEventListener('click', () => {
+        document.getElementById('archModeCloudBtn').className = 'px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-sky-500 text-slate-950 transition';
+        document.getElementById('archModeEdgeBtn').className = 'px-3 py-1.5 rounded-lg text-xs font-mono font-semibold text-slate-300 hover:text-white transition';
+        renderArchStage('tfs');
+        showToast('Switched to Phase I Cloud Architecture (AWS EKS / Azure AKS + TensorFlow Serving gRPC).');
+      });
+
+      document.getElementById('archModeEdgeBtn').addEventListener('click', () => {
+        document.getElementById('archModeEdgeBtn').className = 'px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-emerald-500 text-slate-950 transition';
+        document.getElementById('archModeCloudBtn').className = 'px-3 py-1.5 rounded-lg text-xs font-mono font-semibold text-slate-300 hover:text-white transition';
+        const box = document.getElementById('archStageDetailBox');
+        box.innerHTML = `
+          <div class="lg:col-span-8 space-y-1.5">
+            <div class="text-xs font-mono text-emerald-400">SECTION 33 ROADMAP • TENSORFLOW LITE EDGE INFERENCE</div>
+            <h4 class="text-base font-bold text-white">Phase II Edge AI Paradigm: Local TFLite Execution</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">Migrates the trained LSTM via TensorFlow Lite directly to the local runtime. Instead of streaming 120MB/min of raw 10kHz vibration arrays to the cloud, only the final RUL integer payload is transmitted—enabling millisecond closed-loop emergency brake triggers and full offline resilience if AWS connectivity drops.</p>
+          </div>
+          <div class="lg:col-span-4 bg-slate-900 p-3.5 rounded-xl border border-emerald-500/40 font-mono text-xs">
+            <div class="text-[10px] text-emerald-300">EDGE TFLITE ADVANTAGE</div>
+            <div class="text-white font-bold mt-1">99.9% Bandwidth Reduction • &lt;2ms Closed-Loop Brake Trigger</div>
+          </div>
+        `;
+        showToast('Switched to Phase II TensorFlow Lite Edge AI Runtime (99.9% bandwidth reduction).');
+      });
+
+      // Missing Value Imputation Slider
+      const gapSlider = document.getElementById('gapDurationSlider');
+      gapSlider.addEventListener('input', () => {
+        const val = parseFloat(gapSlider.value);
+        document.getElementById('gapDurationVal').textContent = val.toFixed(1) + ' seconds';
+        const badge = document.getElementById('imputationRuleBadge');
+        if (val <= 3.0) {
+          badge.className = 'px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          badge.textContent = `Forward-Fill Active (${val.toFixed(1)}s ≤ 3.0s)`;
+        } else {
+          badge.className = 'px-2.5 py-1 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+          badge.textContent = `Sequence Break & State Reset (${val.toFixed(1)}s > 3.0s)`;
+        }
+      });
+
+      // Min-Max Normalizer Calculator
+      function updateMinMaxCalc() {
+        const x = parseFloat(document.getElementById('normRawInput').value) || 0;
+        const min = parseFloat(document.getElementById('normMinInput').value) || 0;
+        const max = parseFloat(document.getElementById('normMaxInput').value) || 1;
+        const denom = max - min === 0 ? 1 : max - min;
+        const scaled = (x - min) / denom;
+        const out = document.getElementById('normResultOutput');
+        if (scaled < 0 || scaled > 1.2) {
+          out.className = 'text-sm font-bold text-amber-400';
+          out.textContent = scaled.toFixed(4) + ' (Out-of-bounds / Check Z-Score)';
+        } else {
+          out.className = 'text-sm font-bold text-emerald-400';
+          out.textContent = scaled.toFixed(4) + ' (Normalized [0, 1])';
+        }
+      }
+      ['normRawInput', 'normMinInput', 'normMaxInput'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateMinMaxCalc);
+      });
+
+      // Polyglot Database Explorer
+      function renderDbTable(mode) {
+        const queryBox = document.getElementById('dbQueryDisplay');
+        const container = document.getElementById('dbTableContainer');
+        if (mode === 'pg_rul') {
+          queryBox.textContent = 'SELECT pred_id, machine_id, timestamp, predicted_rul, confidence FROM rul_predictions ORDER BY timestamp DESC;';
+          container.innerHTML = `
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-1.5">pred_id (PK)</th>
+                  <th class="py-1.5">machine_id</th>
+                  <th class="py-1.5">timestamp</th>
+                  <th class="py-1.5 text-right">predicted_rul</th>
+                  <th class="py-1.5 text-right">confidence</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                <tr><td class="py-1.5 text-sky-400">PRD-9041</td><td>CNC_Milling_04</td><td>2026-10-27T11:40:12Z</td><td class="text-right text-rose-400 font-bold">11.5 hrs (84 cyc)</td><td class="text-right">0.948</td></tr>
+                <tr><td class="py-1.5 text-sky-400">PRD-9040</td><td>CNC_Lathe_12</td><td>2026-10-27T11:40:10Z</td><td class="text-right text-emerald-400">85.0 hrs (112 cyc)</td><td class="text-right">0.972</td></tr>
+                <tr><td class="py-1.5 text-sky-400">PRD-9039</td><td>CNC_Milling_01</td><td>2026-10-27T11:40:08Z</td><td class="text-right text-emerald-400">92.0 hrs (121 cyc)</td><td class="text-right">0.981</td></tr>
+              </tbody>
+            </table>
+          `;
+        } else if (mode === 'pg_logs') {
+          queryBox.textContent = 'SELECT log_id, machine_id, action_taken, date, cost FROM maintenance_logs ORDER BY date DESC;';
+          const rows = maintenanceLogs.map(r => `
+            <tr>
+              <td class="py-1.5 text-amber-300">${r.log_id}</td>
+              <td>${r.machine_id}</td>
+              <td class="text-slate-300">${r.action_taken}</td>
+              <td class="text-slate-400">${r.date}</td>
+              <td class="text-right text-emerald-400">${r.cost}</td>
+            </tr>
+          `).join('');
+          container.innerHTML = `
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-1.5">log_id</th>
+                  <th class="py-1.5">machine_id</th>
+                  <th class="py-1.5">action_taken</th>
+                  <th class="py-1.5">date</th>
+                  <th class="py-1.5 text-right">cost</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">${rows}</tbody>
+            </table>
+          `;
+        } else {
+          queryBox.textContent = 'from(bucket: "sensor_readings") |> range(start: -5m) |> filter(fn: (r) => r.machine_id == "CNC_Milling_04") |> aggregateWindow(every: 1m, fn: mean)';
+          container.innerHTML = `
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs space-y-1 text-slate-300">
+              <div class="text-emerald-400">Measurement: sensor_readings (InfluxDB Time-Series Telemetry)</div>
+              <div><span class="text-slate-500">Indexed Tags:</span> machine_id="CNC_Milling_04", sensor_type="IEPE_Triaxial"</div>
+              <div><span class="text-slate-500">Unindexed Fields:</span> value_x=0.012, value_y=0.005, value_z=0.045, temperature=65.2</div>
+              <div><span class="text-slate-500">Retention Policy:</span> 7-day raw 10kHz retention ➔ Continuous Query 1-minute average downsampling</div>
+            </div>
+          `;
+        }
+      }
+
+      document.querySelectorAll('.db-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.db-tab-btn').forEach(b => {
+            b.className = 'db-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800';
+          });
+          btn.className = 'db-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40';
+          renderDbTable(btn.getAttribute('data-db'));
+        });
+      });
+
+      // --- 7. VIEW 3: LSTM LAYER INSPECTOR, ASYMMETRIC SAFETY SCORE & TRAINING SIMULATOR ---
+      const lstmLayers = [
+        {
+          name: 'Layer 1: Input Tensor Layer — Shape (50, 14)',
+          code: 'input_shape = (50, 14) # sequence_length=50, num_features=14',
+          desc: 'Ingests 3D overlapping sliding windows (samples, 50 time steps, 14 normalized sensor & rolling statistical features: RMS, Kurtosis, Crest Factor).'
+        },
+        {
+          name: 'Layer 2: LSTM_1 — 100 Units (return_sequences=True)',
+          code: 'model.add(LSTM(units=100, return_sequences=True, input_shape=(50, 14), name="LSTM_1"))',
+          desc: 'Extracts short-term temporal vibration patterns across all 50 steps and passes the full 50-step sequence of 100-d hidden states to the second LSTM layer.'
+        },
+        {
+          name: 'Layer 3: Dropout_1 — 20% Spatial Regularization',
+          code: 'model.add(Dropout(0.2, name="Dropout_1"))',
+          desc: 'Randomly zeroes 20% of activations during training so the network cannot over-rely on any single noisy sensor channel (Wu et al., 2018).'
+        },
+        {
+          name: 'Layer 4: LSTM_2 — 50 Units (return_sequences=False)',
+          code: 'model.add(LSTM(units=50, return_sequences=False, name="LSTM_2"))',
+          desc: 'Condenses the sequential history via Forget, Input, and Output gates into a single 50-dimensional context vector representing cumulative machine health.'
+        },
+        {
+          name: 'Layer 5: Dropout_2 — 20% Regularization',
+          code: 'model.add(Dropout(0.2, name="Dropout_2"))',
+          desc: 'Prevents overfitting on historical run-to-failure trajectories before final regression.'
+        },
+        {
+          name: 'Layer 6: Dense RUL_Output — 1 Unit (Linear Activation)',
+          code: 'model.add(Dense(units=1, activation="linear", name="RUL_Output"))',
+          desc: 'Outputs the continuous Remaining Useful Life (RUL) estimate, compiled with Adam (lr=0.001) and Mean Squared Error (MSE) loss.'
+        }
+      ];
+
+      function renderLstmLayer(idx) {
+        const l = lstmLayers[idx];
+        document.getElementById('lstmLayerDetailBox').innerHTML = `
+          <div class="space-y-1">
+            <h4 class="text-sm sm:text-base font-bold text-white">${l.name}</h4>
+            <p class="text-xs text-slate-300">${l.desc}</p>
+          </div>
+          <code class="text-xs font-mono px-3 py-2 rounded-lg bg-slate-900 text-emerald-300 border border-slate-800 whitespace-nowrap overflow-x-auto max-w-full">${l.code}</code>
+        `;
+      }
+
+      document.querySelectorAll('.lstm-layer-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.lstm-layer-btn').forEach(b => {
+            b.classList.remove('border-2', 'border-sky-400');
+            b.classList.add('border', 'border-slate-800');
+          });
+          btn.classList.remove('border', 'border-slate-800');
+          btn.classList.add('border-2', 'border-sky-400');
+          renderLstmLayer(parseInt(btn.getAttribute('data-layer'), 10));
+        });
+      });
+
+      // Asymmetric Safety Score Calculator & Chart (Section 22 & 23)
+      let asymmetricChartInstance = null;
+      function updateAsymmetricCalculator() {
+        const trueRul = parseInt(document.getElementById('trueRulSlider').value, 10);
+        const predRul = parseInt(document.getElementById('predRulSlider').value, 10);
+        const d = predRul - trueRul;
+
+        document.getElementById('trueRulLabel').textContent = trueRul + ' cycles';
+        document.getElementById('predRulLabel').textContent = predRul + ' cycles';
+        document.getElementById('calcDiffVal').textContent = (d >= 0 ? '+' : '') + d + ' cycles';
+        document.getElementById('calcRmseVal').textContent = Math.abs(d).toFixed(2);
+
+        const penalty = d < 0 ? (Math.exp(-d / 13.0) - 1) : (Math.exp(d / 10.0) - 1);
+        document.getElementById('calcSafetyVal').textContent = penalty.toFixed(2);
+
+        const badge = document.getElementById('safetyVerdictBadge');
+        if (d > 0) {
+          badge.className = 'px-2.5 py-1 rounded text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+          badge.textContent = `LATE PREDICTION (d = +${d}) • HEAVY PENALTY`;
+        } else if (d < 0) {
+          badge.className = 'px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          badge.textContent = `EARLY PREDICTION (d = ${d}) • CONSERVATIVE SAFE`;
+        } else {
+          badge.className = 'px-2.5 py-1 rounded text-xs font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40';
+          badge.textContent = 'EXACT RUL MATCH (d = 0)';
+        }
+
+        const dValues = [];
+        const asymValues = [];
+        const symValues = [];
+        for (let err = -30; err <= 30; err += 2) {
+          dValues.push(err);
+          const p = err < 0 ? (Math.exp(-err / 13.0) - 1) : (Math.exp(err / 10.0) - 1);
+          asymValues.push(Number(p.toFixed(2)));
+          symValues.push(Math.abs(err) * 0.4);
+        }
+
+        const ctx = document.getElementById('asymmetricChart').getContext('2d');
+        if (asymmetricChartInstance) {
+          asymmetricChartInstance.update();
+          return;
+        }
+        asymmetricChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: dValues.map(v => (v >= 0 ? '+' + v : String(v))),
+            datasets: [
+              {
+                label: 'PHM08 Asymmetric Safety Penalty (exp(d/10)-1 vs exp(-d/13)-1)',
+                data: asymValues,
+                borderColor: '#f43f5e',
+                backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                fill: true,
+                tension: 0.35
+              },
+              {
+                label: 'Standard Symmetric Error (RMSE Proxy)',
+                data: symValues,
+                borderColor: '#38bdf8',
+                borderDash: [4, 4],
+                tension: 0.1
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#cbd5e1', font: { family: 'JetBrains Mono', size: 10 } } }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Error d = Predicted RUL - True RUL', color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#64748b', font: { size: 9 } } },
+              y: { title: { display: true, text: 'Penalty Score', color: '#f43f5e', font: { size: 10 } }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+            }
+          }
+        });
+      }
+
+      document.getElementById('trueRulSlider').addEventListener('input', updateAsymmetricCalculator);
+      document.getElementById('predRulSlider').addEventListener('input', updateAsymmetricCalculator);
+
+      // Training Convergence Chart (Section 24)
+      let trainingChartInstance = null;
+      function initTrainingChart() {
+        const ctx = document.getElementById('trainingHistoryChart').getContext('2d');
+        const epochs = [1, 2, 5, 10, 15, 20, 25, 30, 32, 33, 36, 40, 42];
+        const trainLoss = [3540.12, 1210.45, 780.2, 490.5, 360.1, 295.4, 265.0, 250.1, 245.30, 242.10, 238.0, 234.5, 231.2];
+        const valLoss = [1850.33, 910.11, 620.4, 410.8, 320.5, 270.2, 248.9, 234.0, 230.15, 232.00, 235.4, 239.1, 241.8];
+
+        trainingChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: epochs.map(e => 'Ep ' + e),
+            datasets: [
+              {
+                label: 'Training Loss (MSE)',
+                data: trainLoss,
+                borderColor: '#38bdf8',
+                tension: 0.3
+              },
+              {
+                label: 'Validation Loss (Best @ Ep 32: 230.15)',
+                data: valLoss,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                fill: true,
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#cbd5e1', font: { family: 'JetBrains Mono', size: 10 } } }
+            },
+            scales: {
+              x: { ticks: { color: '#64748b', font: { size: 10 } } },
+              y: { ticks: { color: '#94a3b8', font: { size: 10 } } }
+            }
+          }
+        });
+      }
+
+      document.getElementById('replayTrainingBtn').addEventListener('click', () => {
+        showToast('Replaying AWS EC2 p3.2xlarge V100 training loop: EarlyStopping triggered at Epoch 42, restored Epoch 32 weights!');
+        if (trainingChartInstance) {
+          trainingChartInstance.reset();
+          trainingChartInstance.update();
+        }
+      });
+
+      // --- 8. VIEW 4: PYTHON CODEBASE TABS, FASTAPI SANDBOX & CI/CD SIMULATOR ---
+      const codeSnippets = {
+        env: {
+          code: `# Section 17: Python Code — Environment Setup
+# environment.txt:
+# tensorflow==2.10.0 | pandas==1.5.0 | numpy==1.23.3 | scikit-learn==1.1.2
+
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import os
+
+# Ensure reproducibility
+np.random.seed(42)
+tf.random.set_seed(42)
+
+print(f"TensorFlow Version: {tf.__version__}")
+# Expected output: TensorFlow Version: 2.10.0`,
+          out: `TensorFlow Version: 2.10.0\n[OK] Deterministic seeds locked (np.random.seed=42, tf.random.set_seed=42)`
+        },
+        prep: {
+          code: `# Section 18: Python Code — Data Loading & Preprocessing
+def load_and_preprocess(file_path, max_rul=125):
+    """Loads telemetry, normalizes, and calculates piece-wise RUL."""
+    df = pd.read_csv(file_path)
+
+    # Calculate Max Cycle per machine
+    rul_df = df.groupby('machine_id')['cycle'].max().reset_index()
+    rul_df.columns = ['machine_id', 'max_cycle']
+    df = df.merge(rul_df, on=['machine_id'], how='left')
+
+    # Calculate target RUL & Apply Piecewise Linear RUL (Wu et al., 2018)
+    df['RUL'] = df['max_cycle'] - df['cycle']
+    df['RUL'] = df['RUL'].apply(lambda x: max_rul if x > max_rul else x)
+    df.drop('max_cycle', axis=1, inplace=True)
+
+    # Normalize sensor columns to [0, 1]
+    sensor_cols = [col for col in df.columns if 'sensor' in col]
+    scaler = MinMaxScaler()
+    df[sensor_cols] = scaler.fit_transform(df[sensor_cols])
+
+    return df, scaler, sensor_cols`,
+          out: `[INFO] Loaded train_data.csv (50 CNC machines)\n[INFO] Applied Piecewise Linear RUL cap at max_rul=125 cycles\n[INFO] Normalized 14 sensor channels to range [0.0, 1.0] via MinMaxScaler`
+        },
+        seq: {
+          code: `# Section 19: Python Code — Sequence Generation
+def generate_sequences(df, sequence_length, feature_cols):
+    """Generates 3D arrays (samples, time_steps, features) for LSTM input."""
+    X, y = [], []
+    machine_ids = df['machine_id'].unique()
+
+    for m_id in machine_ids:
+        m_df = df[df['machine_id'] == m_id]
+        data_matrix = m_df[feature_cols].values
+        target_matrix = m_df['RUL'].values
+
+        # Ensure machine has enough data for at least one sequence
+        if len(m_df) >= sequence_length:
+            for i in range(len(m_df) - sequence_length):
+                X.append(data_matrix[i:i + sequence_length])
+                y.append(target_matrix[i + sequence_length])
+
+    return np.array(X), np.array(y)
+
+SEQ_LENGTH = 50
+# X_train, y_train = generate_sequences(train_df, SEQ_LENGTH, features)
+# print(X_train.shape) --> (Num_Samples, 50, 14)`,
+          out: `[INFO] Generated 3D overlapping sliding windows (SEQ_LENGTH = 50)\nX_train.shape --> (17650, 50, 14) | y_train.shape --> (17650,)`
+        },
+        model: {
+          code: `# Section 20: Python Code — Model Definition
+def build_lstm_model(input_shape):
+    """Constructs and compiles the Deep LSTM network."""
+    model = Sequential(name="Predictive_Maintenance_LSTM")
+
+    # Layer 1
+    model.add(LSTM(units=100, return_sequences=True, input_shape=input_shape, name="LSTM_1"))
+    model.add(Dropout(0.2, name="Dropout_1"))
+
+    # Layer 2
+    model.add(LSTM(units=50, return_sequences=False, name="LSTM_2"))
+    model.add(Dropout(0.2, name="Dropout_2"))
+
+    # Output Layer
+    model.add(Dense(units=1, activation='linear', name="RUL_Output"))
+
+    # Compilation
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
+    return model`,
+          out: `Model: "Predictive_Maintenance_LSTM"\n_________________________________________________________________\n Layer (type)                Output Shape              Param #\n=================================================================\n LSTM_1 (LSTM)               (None, 50, 100)           46000\n Dropout_1 (Dropout)         (None, 50, 100)           0\n LSTM_2 (LSTM)               (None, 50)                30200\n Dropout_2 (Dropout)         (None, 50)                0\n RUL_Output (Dense)          (None, 1)                 51\n=================================================================\nTotal params: 76,251 (Trainable: 76,251)`
+        },
+        train: {
+          code: `# Section 21: Python Code — Model Training Loop
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+def train_model(model, X_train, y_train, X_val, y_val):
+    early_stop = EarlyStopping(
+        monitor='val_loss',
+        patience=10,
+        restore_best_weights=True
+    )
+    checkpoint = ModelCheckpoint(
+        'best_pdm_model.h5',
+        monitor='val_loss',
+        save_best_only=True
+    )
+    history = model.fit(
+        X_train, y_train,
+        epochs=100,
+        batch_size=64,
+        validation_data=(X_val, y_val),
+        callbacks=[early_stop, checkpoint],
+        verbose=1
+    )
+    return history`,
+          out: `Epoch 32/100 - loss: 245.30 - mae: 11.20 - val_loss: 230.15 - val_mae: 10.95 [Saved best_pdm_model.h5]\nEpoch 42/100 - Restoring model weights from best epoch: 32. Early stopping.`
+        },
+        eval: {
+          code: `# Section 22: Python Code — Evaluation Metrics
+def evaluate_predictions(y_true, y_pred):
+    """Calculates standard metrics and a custom asymmetric score."""
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+
+    # Asymmetric Scoring Function (Penalty higher if True RUL < Predicted RUL)
+    score = 0
+    for true, pred in zip(y_true, y_pred):
+        d = pred - true
+        if d < 0:
+            score += np.exp(-d/13.0) - 1  # Early prediction penalty
+        else:
+            score += np.exp(d/10.0) - 1   # Late prediction penalty
+
+    print(f"RMSE: {rmse:.2f}")
+    print(f"R2 Score: {r2:.2f}")
+    print(f"Custom Safety Score: {score:.2f} (Lower is better)")`,
+          out: `RMSE: 15.17 (Test benchmark: 14.2 cycles vs 22.5 Random Forest)\nR2 Score: 0.81\nCustom Safety Score: 432.15 (Acceptable threshold < 500 — PASSED)`
+        },
+        docker: {
+          code: `# Section 27: Containerization (Dockerfile for Data Prep & API Gateway)
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y libgomp1 && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code and scaler parameters
+COPY src/ /app/src/
+COPY artifacts/scaler.pkl /app/artifacts/
+
+# Expose API port & Run FastAPI via Uvicorn
+EXPOSE 8000
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]`,
+          out: `Successfully built image aegis-pdm-api:v1.2.0\nContainer listening on 0.0.0.0:8000 (uvicorn src.main:app)`
+        }
+      };
+
+      let currentCodeKey = 'env';
+      function renderCodeTab(key) {
+        currentCodeKey = key;
+        document.getElementById('codeEditorPre').textContent = codeSnippets[key].code;
+        document.getElementById('codeExecOutput').textContent = codeSnippets[key].out;
+      }
+
+      document.querySelectorAll('.code-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.code-tab-btn').forEach(b => {
+            b.className = 'code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-slate-900 text-slate-400 border border-slate-800 whitespace-nowrap';
+          });
+          btn.className = 'code-tab-btn px-2.5 py-1 rounded text-xs font-mono bg-sky-500/20 text-sky-300 border border-sky-500/40 whitespace-nowrap';
+          renderCodeTab(btn.getAttribute('data-code'));
+        });
+      });
+
+      document.getElementById('runCodeSnippetBtn').addEventListener('click', () => {
+        const status = document.getElementById('codeExecStatus');
+        status.textContent = 'Running...';
+        status.className = 'text-amber-400';
+        setTimeout(() => {
+          status.textContent = 'Executed (0.04s)';
+          status.className = 'text-emerald-400';
+          document.getElementById('codeExecOutput').textContent = codeSnippets[currentCodeKey].out;
+          showToast('Executed module ' + currentCodeKey + ' in sandbox runtime.');
+        }, 300);
+      });
+
+      document.getElementById('copyCodeBtn').addEventListener('click', () => {
+        const text = codeSnippets[currentCodeKey].code;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        showToast('Copied code snippet to clipboard!');
+      });
+
+      // FastAPI Live Endpoint Sandbox
+      const apiResponses = {
+        health: `HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "200 OK",
+  "ml_serving_pod": "reachable (grpc://tfs-inference-pod:8500)",
+  "model_version": "v1.2.0-lstm",
+  "redis_window_buffer": "healthy (50 ticks)",
+  "kubernetes_hpa_replicas": 3
+}`,
+        rul: `HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "machine_id": "CNC_Milling_04",
+  "timestamp": "2026-10-27T11:40:12Z",
+  "predicted_rul_cycles": 84,
+  "predicted_rul_hours": 11.5,
+  "confidence": 0.948,
+  "health_status": "WARNING",
+  "source_db": "PostgreSQL (rul_predictions)"
+}`,
+        batch: `HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "job_id": "BATCH-20261027-09",
+  "uploaded_file": "offline_spindle_telemetry.csv",
+  "sequences_evaluated": 128,
+  "tensor_shape": [128, 50, 14],
+  "predictions": [
+    {"machine_id": "CNC_Milling_04", "predicted_rul_hours": 11.5, "status": "CRITICAL"},
+    {"machine_id": "CNC_Lathe_12", "predicted_rul_hours": 85.0, "status": "NORMAL"},
+    {"machine_id": "CNC_Milling_01", "predicted_rul_hours": 92.0, "status": "NORMAL"}
+  ]
+}`
+      };
+
+      function renderApiResponse(key) {
+        document.getElementById('apiResponsePre').textContent = apiResponses[key];
+      }
+
+      document.querySelectorAll('.api-test-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-api');
+          renderApiResponse(key);
+          showToast('FastAPI Uvicorn :8000 returned HTTP 200 OK for ' + key.toUpperCase() + ' endpoint.');
+        });
+      });
+
+      // CI/CD & CT Pipeline Animator
+      document.getElementById('triggerCicdBtn').addEventListener('click', () => {
+        const badges = document.querySelectorAll('.cicd-badge');
+        badges.forEach(b => {
+          b.textContent = '⏳ PENDING...';
+          b.className = 'cicd-badge text-amber-400';
+        });
+        const labels = [
+          '✓ COMMIT VERIFIED',
+          '✓ TENSOR (50,14) OK',
+          '✓ AIRFLOW RMSE 14.2',
+          '✓ EKS ROLLED OUT'
+        ];
+        badges.forEach((b, idx) => {
+          setTimeout(() => {
+            b.textContent = labels[idx];
+            b.className = 'cicd-badge text-emerald-400 font-bold';
+            if (idx === badges.length - 1) {
+              showToast('Continuous Training (CT) & EKS Rolling Update completed with zero downtime!');
+            }
+          }, (idx + 1) * 450);
+        });
+      });
+
+      // --- 9. VIEW 5: ROI CALCULATOR ---
+      function updateRoiCalculator() {
+        const incidents = parseInt(document.getElementById('roiIncidentsSlider').value, 10);
+        const secondary = parseInt(document.getElementById('roiSecondarySlider').value, 10);
+        const downtimeSavings = incidents * 45000;
+        const secondarySavings = secondary * 150000;
+        const total = downtimeSavings + secondarySavings;
+
+        document.getElementById('roiIncidentsLabel').textContent = incidents + (incidents === 1 ? ' incident' : ' incidents');
+        document.getElementById('roiSecondaryLabel').textContent = `${secondary} ${secondary === 1 ? 'machine' : 'machines'} ($${(secondary * 150)}k)`;
+        document.getElementById('roiDowntimeVal').textContent = '$' + downtimeSavings.toLocaleString();
+        document.getElementById('roiTotalVal').textContent = '$' + total.toLocaleString();
+      }
+
+      document.getElementById('roiIncidentsSlider').addEventListener('input', updateRoiCalculator);
+      document.getElementById('roiSecondarySlider').addEventListener('input', updateRoiCalculator);
+
+      // --- 10. INITIALIZE EVERYTHING ON LOAD ---
+      window.addEventListener('resize', () => {
+        resizeHeroCanvas();
+        resizeWaveCanvas();
+      });
+
+      window.addEventListener('DOMContentLoaded', () => {
+        resizeHeroCanvas();
+        drawHeroCanvas();
+        resizeWaveCanvas();
+        drawWaveCanvas();
+        renderMiniFleetMatrix();
+        selectMachineById('CNC_Milling_04');
+        renderArchStage('mqtt');
+        renderDbTable('pg_rul');
+        renderLstmLayer(0);
+        updateAsymmetricCalculator();
+        initTrainingChart();
+        renderCodeTab('env');
+        renderApiResponse('rul');
+        updateRoiCalculator();
+      });
+    })();
+  </script>
+</body>
+</html>
